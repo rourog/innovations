@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rourog Innovations </title>
+  <!-- Importar la librería principal de PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <!-- Fuentes para el banner -->
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Sour+Gummy:ital,wght@0,100..900;1,100..900&family=Syne+Mono&display=swap" rel="stylesheet">
+	<style>
+	/* =====  GLOBAL  =================================================== */
+	html,body{margin:0;padding:0;height:100%;font-family:sans-serif;}
+	.banner{height:50px;background:#F9B872;color:#333;display:flex;align-items:center;padding-left:10px;font-family:'Sour Gummy', monospace; font-size: 40px;}
+	.footer{height:50px;background:#FAE7A5;color:#333;display:flex;align-items:center;justify-content:center;position:fixed;bottom:0;width:100%;}
+	.contenido{display:flex;height:calc(100vh - 100px);overflow:hidden;}
+
+	/* =====  COLUMNA IZQUIERDA  (2 sub‑columnas)  ====================== */
+	.izquierda{
+	  flex:1;
+	  background:#FAE7A5;
+	  padding:10px;
+	  display:flex;                /* contenedor horizontal */
+	  gap:10px;
+	  overflow:hidden;
+	}
+
+	/* --- Columna A: dropzone + visor PDF ------------------------------ */
+	.col-left{
+	  flex:1;
+	  display:flex;
+	  flex-direction:column;
+	  gap:10px;
+	  overflow:hidden;
+	}
+
+	/* Dropzone: llena toda la mitad izquierda al inicio */
+	#dropzone{
+	  flex:1 1 0;                 /* se expande verticalmente */
+	  min-height:120px;
+	  border:2px dashed #F9B872;border-radius:10px;
+	  display:flex;align-items:center;justify-content:center;
+	  background:#fff8ef;color:#333;text-align:center;
+	}
+	#dropzone.dragover{background:#fef0d9;}
+
+	#dropzone {
+	  cursor: pointer;
+	  text-align: center;
+	}
+
+	/* Visor PDF: oculto hasta que se cargue un archivo */
+	#pdfViewer{
+	  flex:1 1 0;
+	  display:none;               /* mostrado vía JS */
+	  flex-direction:column;align-items:center;gap:10px;min-height:0;
+	}
+	#pdfPreview{
+	  width:100%;height:auto;max-height:100%;
+	  border:1px solid #ccc;box-shadow:0 2px 8px rgba(0,0,0,.1);
+	}
+
+	/* --- Columna B: badges + sugerencias — oculta al inicio ----------- */
+	.col-right{
+	  flex:1;
+	  display:none;               /* mostrado vía JS cuando haya PDF */
+	  flex-direction:column;
+	  gap:10px;
+	  overflow:auto;
+	}
+	#detectedStudies{display:flex;flex-direction:column;gap:8px;}
+	#suggestions{flex:1 1 0;}
+
+	/* =====  COLUMNA DERECHA (texto de resultados)  ==================== */
+	.derecha{
+	  flex:1;
+	  padding:10px;
+	  background:#B6E1E7;
+	  display:flex;
+	  flex-direction:column;
+	  overflow-y:auto;
+	}
+	#resultadosLabs{flex:1;width:100%;resize:none;padding:10px;box-sizing:border-box;font-family:monospace;}
+
+	/* =====  BADGES, BOTONES, ETC. ===================================== */
+	.study-badge{
+	  background:#F9B872;color:#222;padding:6px 10px;border-radius:4px;font-size:.9rem;cursor:pointer;
+	  transition:transform .2s ease,box-shadow .2s ease,background-color .2s ease;
+	}
+	.study-badge:hover{transform:scale(1.04);background:#f6a75e;box-shadow:0 4px 8px rgba(0,0,0,.1);}
+	.study-badge.inactive{opacity:.5;text-decoration:line-through;}
+	.mode-badge{background:#FAE7A5;}
+	.mode-badge.active{background:#F9B872;}
+
+	.buttons-container{display:flex;gap:10px;margin-top:10px;}
+
+	/* =====  TEMAS (oscuro y diurno)  — sin cambios ==================== */
+	body.dark{background:#121212;color:#eee;}
+	body.dark .banner,body.dark .footer{background:#1e1e1e;color:#fff;}
+	body.dark .izquierda{background:#1a1a1a;}
+	body.dark .derecha{background:#2a2a2a;}
+	body.dark .study-badge{background:#333;color:#eee;}
+	body.dark .study-badge:hover{background:#444;}
+	body.dark #dropzone{background:#2b2b2b;color:#ccc;border-color:#555;}
+	body.dark textarea{background:#1e1e1e;color:#eee;border:1px solid #555;}
+	body.dark .banner{font-family:'Syne Mono', monospace;}
+
+	body.day{background:#E5EDF1;color:#333;}
+	body.day .banner,body.day .footer{background:#96C2DB;color:#fff;}
+	body.day .izquierda{background:#fff;}
+	body.day .derecha{background:#E5EDF1;}
+	body.day .study-badge{background:#96C2DB;color:#fff;}
+	body.day .study-badge:hover{background:#7AB1CF;}
+	body.day #dropzone{background:#fff;color:#333;border-color:#96C2DB;}
+	body.day textarea{background:#fff;color:#333;border:1px solid #96C2DB;}
+	body.day .theme-toggle{background:#96C2DB;color:#fff;}
+	body.day .theme-toggle:hover{background:#7AB1CF;}
+	body.day .banner{font-family:'Permanent Marker', serif;}
+
+	/* =====  BOTÓN DE TEMA ============================================ */
+	.theme-toggle{
+	  width:36px;height:36px;background:#F9B872;border:none;border-radius:8px;margin-left:auto;margin-right:10px;
+	  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:#333;
+	  transition:background-color .3s ease,transform .3s ease;box-shadow:0 2px 6px rgba(0,0,0,.2);
+	}
+	.theme-toggle:hover{background:#f6a75e;transform:scale(1.1);}
+	body.dark .theme-toggle{background:#444;color:#fff;}
+	
+	
+	/* Tubo de Ensayo */
+	.tubo-ensayo {
+	  width: 16px;
+	  height: 36px;
+	  margin-right: 10px;
+	}
+
+	.tubo-ensayo .tube {
+	  width: 100%;
+	  height: 100%;
+	  border: 2px solid #ccc;
+	  border-radius: 0px 0px 10px 10px;
+	  position: relative;
+	  overflow: hidden;
+	  background: rgba(255, 255, 255, 0.1);
+	  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+	}
+
+	.tubo-ensayo .liquid {
+	  position: absolute;
+	  bottom: 0;
+	  width: 100%;
+	  height: 0;
+	  animation: fillLiquid 2s ease-in-out forwards;
+	}
+
+	/* Temas */
+	body.dark .tubo-ensayo .liquid {
+	  background: linear-gradient(to top, #ff5f5f, #b80000); /* rojo */
+	}
+
+	body.day .tubo-ensayo .liquid {
+	  background: linear-gradient(to top, #ffd580, #ff9900); /* naranja */
+	}
+
+	body.sunset .tubo-ensayo .liquid,
+	body:not(.dark):not(.day) .tubo-ensayo .liquid {
+	  background: linear-gradient(to top, #7dffb4, #00b86b); /* verde */
+	}
+
+
+	@keyframes fillLiquid {
+	  from { height: 0%; }
+	  to   { height: 70%; }
+	}
+
+	.tubo-ensayo .bubble {
+	  position: absolute;
+	  width: 4px;
+	  height: 4px;
+	  background: white;
+	  border-radius: 50%;
+	  bottom: 1px;
+	  animation: rise 3s infinite ease-in-out;
+	  opacity: 0.7;
+	}
+
+	.tubo-ensayo .bubble:nth-child(2) { left: 3px; animation-delay: 0s; }
+	.tubo-ensayo .bubble:nth-child(3) { left: 8px; animation-delay: 1.2s; }
+	.tubo-ensayo .bubble:nth-child(4) { left: 5px; animation-delay: 2.4s; }
+
+	@keyframes rise {
+	  0%   { transform: translateY(0) scale(1); opacity: 0.7; }
+	  50%  { transform: translateY(-20px) scale(1.2); opacity: 0.4; }
+	  100% { transform: translateY(-35px) scale(0.8); opacity: 0; }
+	}
+	
+	.tubo-ensayo .tube::before {
+	  content: '';
+	  position: absolute;
+	  top: 0;
+	  left: 10px;
+	  width: 4px;
+	  border-radius: 10px;
+	  height: 100%;
+	  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.3));
+	  border-radius: 3px;
+	  pointer-events: none;
+	  z-index: 2;
+	  filter: blur(0.3px);
+	}
+	
+	@keyframes shake {
+	  0%, 100%   { transform: translate(0, 0) rotate(0deg); }
+	  5%         { transform: translate(-1px, -1px) rotate(-1deg); }
+	  10%        { transform: translate(1px, 0) rotate(1deg); }
+	  15%        { transform: translate(-1px, 1px) rotate(-1deg); }
+	  20%        { transform: translate(1px, -1px) rotate(1deg); }
+	  30%        { transform: translate(0, 0) rotate(0deg); }
+	  50%        { transform: translate(-2px, 1px) rotate(-2deg); }
+	  70%        { transform: translate(2px, -1px) rotate(2deg); }
+	  90%        { transform: translate(-1px, 1px) rotate(-1deg); }
+	}
+
+	@keyframes shakeGrande {
+	  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+	  10% { transform: translate(-2px, 0) rotate(-2deg); }
+	  20% { transform: translate(2px, 2px) rotate(2deg); }
+	  30% { transform: translate(-3px, -1px) rotate(-2deg); }
+	  40% { transform: translate(2px, 2px) rotate(3deg); }
+	  50% { transform: translate(-1px, 0) rotate(-3deg); }
+	  60% { transform: translate(2px, -2px) rotate(2deg); }
+	  70% { transform: translate(-2px, 1px) rotate(-1deg); }
+	  80% { transform: translate(1px, 0) rotate(1deg); }
+	  90% { transform: translate(-1px, -1px) rotate(-1deg); }
+	}
+	
+	@keyframes shakeFluidoViolento {
+	  0%   { transform: translate(0, 0) rotate(0deg); }
+	  5%   { transform: translate(-4px, -3px) rotate(-4deg); }
+	  10%  { transform: translate(5px, 3px) rotate(5deg); }
+	  15%  { transform: translate(-6px, 2px) rotate(-6deg); }
+	  20%  { transform: translate(4px, -3px) rotate(5deg); }
+	  25%  { transform: translate(-5px, 1px) rotate(-4deg); }
+	  30%  { transform: translate(5px, 0px) rotate(4deg); }
+	  35%  { transform: translate(-6px, -2px) rotate(-6deg); }
+	  40%  { transform: translate(6px, 3px) rotate(6deg); }
+	  45%  { transform: translate(-4px, 1px) rotate(-4deg); }
+	  50%  { transform: translate(3px, -4px) rotate(4deg); }
+	  55%  { transform: translate(-5px, 2px) rotate(-5deg); }
+	  60%  { transform: translate(6px, -3px) rotate(5deg); }
+	  65%  { transform: translate(-4px, 1px) rotate(-6deg); }
+	  70%  { transform: translate(4px, 2px) rotate(4deg); }
+	  75%  { transform: translate(-3px, -2px) rotate(-4deg); }
+	  80%  { transform: translate(4px, 1px) rotate(3deg); }
+	  85%  { transform: translate(-4px, -1px) rotate(-3deg); }
+	  90%  { transform: translate(3px, 2px) rotate(2deg); }
+	  95%  { transform: translate(-3px, 0px) rotate(-2deg); }
+	  100% { transform: translate(0, 0) rotate(0deg); }
+	}
+
+	
+		@keyframes nivelLiquidoReaccion {
+		  0%   {
+			height: 40%;
+			background: var(--liquido-base);
+		  }
+		  30%  {
+			height: 20%;
+			background: var(--liquido-base);
+		  }
+		  60% {
+			height: 100%;
+			background: #009dff; /* 💙 azul brillante */
+		  }
+		  100% {
+			height: 0%;
+			background: transparent;
+		  }
+		}
+
+	.tubo-ensayo.shake .liquid {
+	  animation: nivelLiquidoReaccion 6s ease-in-out;
+	}
+
+	.tubo-ensayo.shake .tube {
+	  animation: shakeFluidoViolento 6s ease-in-out;
+	}
+	body.dark  { --liquido-base: #ff5f5f; }      /* rojo oscuro */
+	body.day   { --liquido-base: #ff9900; }      /* naranja brillante */
+	body.sunset,
+	body:not(.dark):not(.day) { --liquido-base: #00b86b; }  /* verde sunset */
+
+	
+
+	</style>
+
+</head>
+<body>
+
+
+	<div class="banner">
+		<div class="tubo-ensayo">
+		<audio id="bubbleSound" src="src/bubble.wav" preload="auto"></audio>
+		  <div class="tube">
+			<div class="liquid"></div>
+			<div class="bubble"></div>
+			<div class="bubble"></div>
+			<div class="bubble"></div>
+		  </div>
+		</div>
+	  BioAnalytics v. 0.0.4
+	  <button id="toggleTheme" class="theme-toggle" title="Cambiar tema">☀️</button>
+	</div>
+	<audio id="pdfOk" src="src/confirm.wav" preload="auto"></audio>
+
+  <div class="contenido">
+<div class="izquierda">
+
+	<!-- Columna A -->
+	<div class="col-left">
+		<div id="dropzone"
+		role="button"
+		tabindex="0"
+		aria-label="Arrastra tu PDF aquí o haz clic para cargarlo">
+		Arrastra tu PDF aquí<br>o haz clic para cargarlo
+		</div>
+
+    <div id="pdfViewer">
+      <canvas id="pdfPreview"></canvas>
+      <div style="display:flex;gap:10px;">
+        <button id="prevPage" class="study-badge" title="Página anterior">←</button>
+		<button id="resetButton" class="study-badge" title="Reiniciar visor">🗑️</button>
+        <button id="nextPage" class="study-badge" title="Página siguiente">→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna B -->
+  <div class="col-right">
+    <div id="detectedStudies"></div>
+    <div id="suggestions">
+      <em>Próximamente sugerencias…</em>
+    </div>
+  </div>
+
+</div>
+
+
+	
+    <div class="derecha">
+      <div class="study-badge" id="botonPaciente"></div>
+	  <div class="study-badge" id="botonFechaIngreso"></div>
+      <textarea id="resultadosLabs" placeholder="Aquí se mostrarán los resultados extraídos..."></textarea>
+
+      <div class="buttons-container">
+        <div class="study-badge" id="copyButton">Copiar</div>
+        <div class="study-badge" id="clearButton">Borrar</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer" style="font-size: 14px;"> © 2025 Rourog Innovations. Todos los Derechos Reservados.</div>
+
+  <script>
+  
+	let pdfDoc = null;
+	let currentPage = 1;
+	let totalPages = 0;
+
+    // Asegurar la ruta del worker de PDF.js
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    }
+
+	const dropzone = document.getElementById('dropzone');  // ← ya lo tienes :contentReference[oaicite:0]{index=0}&#8203;:contentReference[oaicite:1]{index=1}
+	// 1) Creamos un <input type="file"> oculto (si no existe)
+	let fileInput = document.getElementById('fileInput');
+	if (!fileInput) {
+	  fileInput = document.createElement('input');
+	  fileInput.type = 'file';
+	  fileInput.accept = 'application/pdf';
+	  fileInput.id = 'fileInput';
+	  fileInput.style.display = 'none';
+	  document.body.appendChild(fileInput);
+	}
+	// 2) Al hacer clic sobre el dropzone, disparar el input
+	dropzone.addEventListener('click', () => fileInput.click());
+	// 3) Cuando el usuario elija un PDF, simulamos el evento “drop”
+	fileInput.addEventListener('change', e => {
+	  if (e.target.files.length > 0) {
+		const dt = new DataTransfer();
+		dt.items.add(e.target.files[0]);
+		const dropEvent = new DragEvent('drop', {
+		  dataTransfer: dt,
+		  bubbles: true,
+		  cancelable: true
+		});
+		dropzone.dispatchEvent(dropEvent);
+	  }
+	});
+	
+    const resultadoTextarea = document.getElementById('resultadosLabs');
+	resultadoTextarea.value = '';
+    const detectedStudiesDiv = document.getElementById('detectedStudies');
+    const copyButton = document.getElementById('copyButton');
+    const clearButton = document.getElementById('clearButton');
+	// 3) Nuevas referencias para nombre y fecha
+	const botonPaciente = document.getElementById('botonPaciente');
+	const botonFechaIngreso = document.getElementById('botonFechaIngreso');
+	const suggestionsDiv = document.getElementById('suggestions');
+
+
+
+    // Variable global para el texto completo extraído del PDF
+    let textoPDF = '';
+
+    // Variable para el modo detallado (false: resumido; true: detallado)
+    let detailedMode = false;
+
+    // Objeto para almacenar los datos por secciones segmentadas
+    // sectionsData[sectionTitle] = { items: [ { label, value, short, full, units } ], active: bool }
+    const sectionsData = {};
+
+    // Orden deseado para las secciones
+    const sectionsOrder = [
+      'Biometría Hemática',
+      'Química Sanguínea',
+      'Pruebas de Función Hepática',
+      'Electrolitos Sericos',
+      'Enzimas Cardiacas',
+      'Perfil Tiroideo',
+      'Perfil de Lipidos',
+      'Tiempos de Coagulacion',
+      'Examen General de Orina',
+      'Otros'
+    ];
+
+    // Definiciones de pruebas (se puede ampliar según las necesidades)
+    const labDefinitions = {
+      // Biometría Hemática
+      'LEUCOCITOS': { short: 'Leu', full: 'Leucocitos', units: '10^3/µL' },
+      'NEUTROFILOS': { short: 'Neu', full: 'Neutrófilos', units: '10^3/µL' },
+      'LINFOCITOS': { short: 'Lin', full: 'Linfocitos', units: '10^3/µL' },
+      'MONOCITOS': { short: 'Mon', full: 'Monocitos', units: '10^3/µL' },
+      'EOSINOFILOS': { short: 'Eos', full: 'Eosinófilos', units: '10^3/µL' },
+      'BASOFILOS': { short: 'Bas', full: 'Basófilos', units: '10^6/µL' },
+      'ERITROCITOS': { short: 'Eri', full: 'Eritrocitos', units: 'x10^6/µL' },
+      'HEMOGLOBINA': { short: 'Hb', full: 'Hemoglobina', units: 'g/dL' },
+      'HEMATOCRITO': { short: 'Hto', full: 'Hematocrito', units: '%' },
+      'VOLUMEN CORPUSCULAR MEDIO': { short: 'VCM', full: 'Volumen Corpuscular Medio', units: 'fL' },
+      'HEMOGLOBINA CORPUSCULAR MEDIA': { short: 'HCM', full: 'Hemoglobina Corpuscular Media', units: 'pg' },
+      'PLAQUETAS': { short: 'Pla', full: 'Plaquetas', units: 'x10^3/µL' },
+      'VOLUMEN PLAQUETAR MEDIO': { short: 'VPM', full: 'Volumen Plaquetar Medio', units: 'fL' },
+
+      // Química Sanguínea
+      'GLUCOSA': { short: 'Glucosa', full: 'Glucosa', units: 'mg/dL' },
+      'UREA': { short: 'Urea', full: 'Urea', units: 'mg/dL' },
+      'CREATININA': { short: 'Creatinina', full: 'Creatinina ', units: 'mg/dL' },
+      'ACIDO URICO': { short: 'Ac. Urico', full: 'Ácido Úrico', units: 'mg/dL' },
+
+      // Función hepática
+      'BILIRRUBINA TOTAL': { short: 'BT', full: 'Bilirrubina Total', units: 'mg/dL' },
+      'BILIRRUBINA DIRECTA': { short: 'BD', full: 'Bilirrubina Directa', units: 'mg/dL' },
+      'BILIRRUBINA INDIRECTA': { short: 'BI', full: 'Bilirrubina Indirecta', units: 'mg/dL' },
+      'OXALACETICA': { short: 'TGO', full: 'Transaminasa Oxalacética (AST)', units: 'U/L' },
+      'PIRUVICA': { short: 'TGP', full: 'Transaminasa Pirúvica (ALT)', units: 'U/L' },
+      'FOSFATASA ALCALINA': { short: 'FA', full: 'Fosfatasa Alcalina', units: 'U/L' },
+      'GAMAGLUTAMIL TRANSFERASA': { short: 'GGT', full: 'Gamaglutamil Transferasa', units: 'U/L' },
+      'ALBUMINA': { short: 'Albumina', full: 'Albúmina Sérica', units: 'g/dL' },
+      'PROTEINAS TOTALES': { short: 'PT', full: 'Proteínas Totales', units: 'g/dL' },
+      'AMILASA': { short: 'Amilasa', full: 'Amilasa', units: 'U/L' },
+      'LIPASA': { short: 'Lipasa', full: 'Lipasa', units: 'U/L' },
+
+      // Electrolitos
+      'SODIO': { short: 'Na', full: 'Sodio', units: 'mEq/L' },
+      'POTASIO': { short: 'K', full: 'Potasio', units: 'mEq/L' },
+      'CLORO': { short: 'Cl', full: 'Cloro', units: 'mEq/L' },
+      'CALCIO': { short: 'Ca', full: 'Calcio', units: 'mg/dL' },
+      'FOSFORO': { short: 'P', full: 'Fósforo', units: 'mg/dL' },
+      'MAGNESIO': { short: 'Mg', full: 'Magnesio', units: 'mg/dL' },
+
+      // Enzimas cardíacas
+      'CREATINFOSFOQUINASA': { short: 'CPK', full: 'Creatinfosfoquinasa', units: 'U/L' },
+      'CK-MB': { short: 'CK-MB', full: 'Creatina Quinasa MB', units: 'U/L' },
+      'TROPONINA': { short: 'Troponina', full: 'Troponina', units: 'ng/mL' },
+      'MIOGLOBINA': { short: 'Mioglobina', full: 'Mioglobina', units: 'ng/mL' },
+
+      // Perfil tiroideo
+      'T3 TOTAL': { short: 'T3T', full: 'T3 Total', units: 'ng/dL' },
+      'T3 LIBRE': { short: 'T3L', full: 'T3 Libre', units: 'pg/mL' },
+      'T4 TOTAL': { short: 'T4T', full: 'T4 Total', units: 'µg/dL' },
+      'T4 LIBRE': { short: 'T4L', full: 'T4 Libre', units: 'ng/dL' },
+      'TSH': { short: 'TSH', full: 'Hormona Estimulante de Tiroides', units: 'µIU/mL' },
+
+      // Perfil de lípidos
+      'COLESTEROL': { short: 'CT', full: 'Colesterol Total', units: 'mg/dL' },
+      'HDL COLESTEROL': { short: 'HDL', full: 'Colesterol HDL', units: 'mg/dL' },
+      'LDL COLESTEROL': { short: 'LDL', full: 'Colesterol LDL', units: 'mg/dL' },
+      'VLDL COLESTEROL': { short: 'VLDL', full: 'Colesterol VLDL', units: 'mg/dL' },
+      'TRIGLICERIDOS': { short: 'Triglicéridos', full: 'Triglicéridos', units: 'mg/dL' },
+
+      // Tiempos de coagulacion
+      'TIEMPO DE PROTOMBINA': { short: 'TP', full: 'Tiempo de Protrombina', units: 'seg' },
+      'TIEMPO DE TROMBOPLASTINA PARCIAL': { short: 'TTP', full: 'Tiempo de Tromboplastina Parcial', units: 'seg' },
+      'INR': { short: 'INR', full: 'Índice Internacional Normalizado', units: '' },
+
+      // Examen general de orina
+	  'ASPECTO': { short: 'Aspecto', full: 'Aspecto', units: '' },
+	  'COLOR': { short: 'Color', full: 'Color', units: '' },
+	  'GLUCOSA': { short: 'Glucosa', full: 'Glucosa', units: '' },
+      'DENSIDAD': { short: 'Densidad', full: 'Densidad Urinaria', units: '' },
+      'PH': { short: 'pH', full: 'pH Urinario', units: '' },
+	  'NITRITOS': { short: 'Nitritos', full: 'Nitritos en orina', units: '' },
+      'BACTERIAS': { short: 'Bacterias', full: 'Bacteriuria', units: '' },
+	  'HB': { short: 'Hb', full: 'Hemoglobina', units: '' },
+	  'LEUCOCITOS': { short: 'Leucocitos', full:'Leucocitos', units:''},
+	  'ERITROCITOS': { short: 'Eritrocitos', full:'Eritrocitos', units:''},
+      'CELULAS': { short: 'Células', full: 'Células', units: '' },
+      'CRISTALES': { short: 'Cristales', full: 'Cristales', units: '' },
+      'CILINDROS': { short: 'Cilindros', full: 'Cilindros', units: '' },
+      'MOCO': { short: 'Moco', full: 'Moco', units: '' },
+      'LEVADURAS': { short: 'Levaduras', full: 'Levaduras', units: '' },
+      'PARASITOS': { short: 'Parásitos', full: 'Parásitos', units: '' },
+
+      // Otros
+      '%HBA1C': { short: 'HbA1c', full: 'Hemoglobina Glicosilada', units: '%' },
+      'MICRO ALBUMINA': { short: 'Microalbumina', full: 'Microalbuminuria', units: 'mg/dL' },
+	  'PROCALCITONINA': { short: 'Procalcitonina', full: 'Procalcitonina', units: 'ng/mL' },
+      'NT-PROBNP': { short: 'NT-proBNP', full: 'NT-proBNP', units: 'pg/mL' },
+	  
+	  // Inmunologia 
+	  'VDRL': { short: 'VDRL', full: 'Sífilis (VDRL)', units: '' },
+      'HIV': { short: 'HIV', full: 'HIV/VIH', units: '' },
+      'VIRUS HEPATITIS A': { short: 'Hep A', full: 'Hepatitis A', units: '' },
+      'VIRUS HEPATITIS B': { short: 'Hep B', full: 'Hepatitis B', units: '' },
+      'VIRUS HEPATITIS C': { short: 'Hep C', full: 'Hepatitis C', units: '' },
+
+	  
+    };
+
+    /**************** FUNCIONES PARA SEGMENTAR EL TEXTO ****************/
+    // Segmenta el texto completo en bloques utilizando encabezados
+function segmentTextBlocks(text) {
+  const headersRegex = /(HEMATOLOGIA|QUIMICA|ORINAS|PRUEBAS DE FUNCION(?:AMIENTO)? HEPATICO|COAGULACION|ELECTROLITOS(?: SERICOS)?|FUNCION RENAL|PERFIL DE LIPIDOS|LIPIDOS|PERFIL TIROIDEO|TIROIDES|ENZIMAS CARDIACAS|ENZIMAS|INMUNOLOGIA|VIROLOGIA|MARCADORES TUMORALES|OTROS)/ig;
+
+  const mapping = {
+    "HEMATOLOGIA": "Biometría Hemática",
+    "QUIMICA": "Química Sanguínea",
+    "ORINAS": "Examen General de Orina",
+    "PRUEBAS DE FUNCION HEPATICO": "Pruebas de Función Hepática",
+    "PRUEBAS DE FUNCIONAMIENTO HEPATICO": "Pruebas de Función Hepática",
+    "COAGULACION": "Tiempos de Coagulacion",
+    "ELECTROLITOS": "Electrolitos Sericos",
+    "ELECTROLITOS SERICOS": "Electrolitos Sericos",
+    "FUNCION RENAL": "Electrolitos Sericos",
+    "PERFIL DE LIPIDOS": "Perfil de Lipidos",
+    "LIPIDOS": "Perfil de Lipidos",
+    "PERFIL TIROIDEO": "Perfil Tiroideo",
+    "TIROIDES": "Perfil Tiroideo",
+    "ENZIMAS CARDIACAS": "Enzimas Cardiacas",
+    "ENZIMAS": "Enzimas Cardiacas",
+    "INMUNOLOGIA": "Otros",
+    "VIROLOGIA": "Otros",
+    "MARCADORES TUMORALES": "Otros",
+    "OTROS": "Otros"
+  };
+
+  const blocks = {};
+  const matches = [...text.matchAll(headersRegex)];
+
+  if (matches.length === 0) {
+    blocks["Global"] = text;
+    return blocks;
+  }
+
+  for (let i = 0; i < matches.length; i++) {
+    const headerFound = matches[i][0].toUpperCase();
+    const sectionName = mapping[headerFound] || "Otros"; // 🟢 REGLA DE RESPALDO
+    const start = matches[i].index;
+    const end = (i < matches.length - 1) ? matches[i + 1].index : text.length;
+    const blockText = text.substring(start, end);
+
+    if (blocks[sectionName]) {
+      blocks[sectionName] += "\n" + blockText;
+    } else {
+      blocks[sectionName] = blockText;
+    }
+  }
+
+  return blocks;
+}
+
+
+    // Construye una sección a partir de un bloque de texto con los items indicados
+    function buildSectionForBlock(sectionTitle, blockText, entries) {
+      if (!sectionsData[sectionTitle]) {
+        sectionsData[sectionTitle] = { items: [], active: true };
+      }
+	  
+		const valInBlock = (label, flags = 'i') => {
+		  const regex = new RegExp(label + '\\s+((?:NO\\s+[A-ZÑÁÉÍÓÚ]+)|(?:[<>]=?\\s*)?[\\d,.]+|[A-ZÑÁÉÍÓÚ]+)', flags);
+		  const m = blockText.match(regex);
+		  return m ? m[1] : null;
+		};
+
+
+      const capitalizar = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+      entries.forEach(([label, defaultShortName]) => {
+        const foundValue = valInBlock(label);
+        if (foundValue) {
+          let defKey = label;
+          if (/CK[-\s]?MB/i.test(label)) {
+            defKey = 'CK-MB';
+          } else {
+            defKey = defKey.toUpperCase();
+          }
+          const definition = labDefinitions[defKey];
+          if (definition) {
+            sectionsData[sectionTitle].items.push({
+              label: defKey,
+              value: foundValue,
+              short: definition.short,
+              full: definition.full,
+              units: definition.units
+            });
+          } else {
+            sectionsData[sectionTitle].items.push({
+              label: defKey,
+              value: foundValue,
+              short: defaultShortName,
+              full: capitalizar(defaultShortName),
+              units: ''
+            });
+          }
+        }
+      });
+    }
+
+function parseLabResults() {
+  const blocks = segmentTextBlocks(textoPDF);
+
+  // Reinicia sectionsData según los bloques detectados
+  for (const section in blocks) {
+    sectionsData[section] = { items: [], active: true };
+  }
+
+  if (blocks["Biometría Hemática"]) {
+    buildSectionForBlock("Biometría Hemática", blocks["Biometría Hemática"], [
+      ['LEUCOCITOS', 'Leucocitos'],
+      ['NEUTROFILOS', 'Neutrofilos'],
+      ['LINFOCITOS', 'Linfocitos'],
+      ['MONOCITOS', 'Monocitos'],
+      ['EOSINOFILOS', 'Eosinofilos'],
+      ['BASOFILOS', 'Basofilos'],
+      ['ERITROCITOS', 'Eritrocitos'],
+      ['HEMOGLOBINA', 'Hb'],
+      ['HEMATOCRITO', 'Hto'],
+      ['VOLUMEN CORPUSCULAR MEDIO', 'VCM'],
+      ['HEMOGLOBINA CORPUSCULAR MEDIA', 'HCM'],
+      ['PLAQUETAS', 'Plaquetas'],
+      ['VOLUMEN PLAQUETAR MEDIO', 'VPM']
+    ]);
+  }
+
+  if (blocks["Examen General de Orina"]) {
+    buildSectionForBlock("Examen General de Orina", blocks["Examen General de Orina"], [
+      ['COLOR', 'Color'],
+      ['ASPECTO', 'Aspecto'],
+      ['GLUCOSA', 'Glucosa'],
+      ['HB', 'Hb'],
+      ['PH', 'pH'],
+      ['NITRITOS', 'Nitritos'],
+      ['LEUCOCITOS', 'Leucocitos'],
+      ['ERITROCITOS', 'Eritrocitos'],
+      ['CELULAS', 'Células'],
+      ['CRISTALES', 'Cristales'],
+      ['CILINDROS', 'Cilindros'],
+      ['BACTERIAS', 'Bacterias'],
+      ['MOCO', 'Moco'],
+      ['LEVADURAS', 'Levaduras'],
+      ['PARASITOS', 'Parásitos']
+    ]);
+  }
+
+  if (blocks["Química Sanguínea"]) {
+    buildSectionForBlock("Química Sanguínea", blocks["Química Sanguínea"], [
+      ['GLUCOSA', 'Glucosa'],
+      ['UREA', 'Urea'],
+      ['CREATININA', 'Creatinina'],
+      ['ACIDO URICO', 'Ac. Urico']
+    ]);
+  }
+
+  if (blocks["Pruebas de Función Hepática"]) {
+    buildSectionForBlock("Pruebas de Función Hepática", blocks["Pruebas de Función Hepática"], [
+      ['BILIRRUBINA TOTAL', 'Bilirrubina Total'],
+      ['BILIRRUBINA DIRECTA', 'Bilirrubina Directa'],
+      ['BILIRRUBINA INDIRECTA', 'Bilirrubina Indirecta'],
+      ['OXALACETICA', 'TGO'],
+      ['PIRUVICA', 'TGP'],
+      ['FOSFATASA ALCALINA', 'FA'],
+      ['GAMAGLUTAMIL TRANSFERASA', 'GGT'],
+      ['ALBUMINA', 'Albumina'],
+      ['PROTEINAS TOTALES', 'Proteinas Totales'],
+      ['AMILASA', 'Amilasa'],
+      ['LIPASA', 'Lipasa']
+    ]);
+  }
+
+  if (blocks["Tiempos de Coagulacion"]) {
+    buildSectionForBlock("Tiempos de Coagulacion", blocks["Tiempos de Coagulacion"], [
+      ['TIEMPO DE PROTOMBINA', 'TP'],
+      ['TIEMPO DE TROMBOPLASTINA PARCIAL', 'TTP'],
+      ['INR', 'INR']
+    ]);
+  }
+
+  if (blocks["Electrolitos Sericos"]) {
+    buildSectionForBlock("Electrolitos Sericos", blocks["Electrolitos Sericos"], [
+      ['SODIO', 'Sodio'],
+      ['POTASIO', 'Potasio'],
+      ['CLORO', 'Cloro'],
+      ['CALCIO', 'Calcio'],
+      ['FOSFORO', 'Fosforo'],
+      ['MAGNESIO', 'Magnesio']
+    ]);
+  }
+
+  if (blocks["Perfil de Lipidos"]) {
+    buildSectionForBlock("Perfil de Lipidos", blocks["Perfil de Lipidos"], [
+      ['COLESTEROL', 'Colesterol Total'],
+      ['HDL COLESTEROL', 'HDL'],
+      ['LDL COLESTEROL', 'LDL'],
+      ['VLDL COLESTEROL', 'VLDL'],
+      ['TRIGLICERIDOS', 'Triglicéridos']
+    ]);
+  }
+
+  if (blocks["Perfil Tiroideo"]) {
+    buildSectionForBlock("Perfil Tiroideo", blocks["Perfil Tiroideo"], [
+      ['T3 TOTAL', 'T3 Total'],
+      ['T3 LIBRE', 'T3 Libre'],
+      ['T4 TOTAL', 'T4 Total'],
+      ['T4 LIBRE', 'T4 Libre'],
+      ['TSH', 'TSH']
+    ]);
+  }
+
+  if (blocks["Enzimas Cardiacas"]) {
+    buildSectionForBlock("Enzimas Cardiacas", blocks["Enzimas Cardiacas"], [
+      ['CREATINFOSFOQUINASA', 'CPK'],
+      ['CK-MB', 'CK-MB'],
+      ['TROPONINA', 'Troponina'],
+      ['MIOGLOBINA', 'Mioglobina']
+    ]);
+  }
+
+	if (blocks["Otros"]) {
+	  buildSectionForBlock("Otros", blocks["Otros"], [
+		['%HBA1C', 'HbA1c'],
+		['MICRO ALBUMINA', 'Microalbumina'],
+		['PROCALCITONINA', 'Procalcitonina'],
+		['NT PROBNP', 'NT-proBNP'],
+		['NT-PROBNP', 'NT-proBNP'],
+		['NT PRO BNP', 'NT-proBNP'],
+		['VDRL', 'VDRL'],
+		['HIV', 'HIV'],
+		['VIRUS HEPATITIS A', 'Hep A'],
+		['VIRUS HEPATITIS B', 'Hep B'],
+		['VIRUS HEPATITIS C', 'Hep C']
+	  ]);
+	}
+
+}
+
+
+		// 2) Funciones para extraer nombre y fecha
+
+		// Extrae un nombre tras el texto "PACIENTE:"
+		function parsePatientName(text) {
+		  // Captura hasta que aparezca "FOLIO", "FECHA DE INGRESO" o fin de la línea.
+		  const regex = /PACIENTE\s*:\s*([A-Za-zÁÉÍÓÚáéíóúÑñ\s]+?)(?=\s*(FOLIO|FECHA DE INGRESO|$))/i;
+		  const match = text.match(regex);
+		  return match ? match[1].trim() : null;
+		}
+
+		// Extrae la fecha después de "FECHA DE INGRESO:" en formato DD/MM/YYYY
+		function parseIngresoDate(text) {
+		  const regex = /FECHA DE INGRESO:\s*(\d{2}\/\d{2}\/\d{4})/i;
+		  const match = text.match(regex);
+		  return match ? match[1].trim() : null;
+		}
+
+		// FUNCIÓN PARA ANALIZAR LOS DATOS DEL PDF
+		function analyzeResults() {
+
+		  /* ---------- helpers ---------- */
+		  const getValue = key => {
+			for (const s of Object.values(sectionsData)) {
+			  const f = s.items.find(it => it.label === key);
+			  if (f) {
+				const n = parseFloat(String(f.value).replace(',', '.'));
+				return isNaN(n) ? null : n;
+			  }
+			}
+			return null;
+		  };
+		  const suggestions = [];
+		  const pushSug = txt => suggestions.push(txt);
+
+		  /* ULN locales utilizados en algunos cálculos  */
+		  const ULN = { ALT: 40, ALP: 120, CKMB: 25, Troponina: 0.04 };
+
+		  /* ---------- 1. Anemia OMS (adultos) ---------- */
+		  const hb = getValue('HEMOGLOBINA');
+		  if (hb !== null) {
+			let grado = null;
+			if (hb < 6)      grado = 'Grave Grado IV';
+			else if (hb < 8) grado = 'Grave Grado III';
+			else if (hb < 10)grado = 'Moderada Grado II';
+			else if (hb < 13)grado = 'Leve Grado I';
+			if (grado) pushSug(`Hemoglobina ${hb} g/dL → Anemia ${grado} (OMS 2024).`);
+		  }
+
+		  /* ---------- 2. Plaquetas ---------- */
+		  const pla = getValue('PLAQUETAS');
+		  if (pla !== null) {
+			if (pla > 1000) pushSug(`Plaquetas ${pla}×10³/µL → trombocitosis severa; considerar *aféresis plaquetaria*.`);
+			else if (pla < 50) pushSug(`Plaquetas ${pla}×10³/µL → <50 000; valorar *transfusión plaquetaria*.`);
+		  }
+
+	/* ==========  ELECTROLITOS (comentarios entre paréntesis)  ========== */
+
+	/* ---------- Sodio ---------- */
+	const na = getValue('SODIO');
+	if (na !== null) {
+	  if (na < 135) {          // Hiponatremia
+		let grado, cmt;
+		if (na < 120)      { grado = 'Profunda (< 120 mEq/L)'; cmt = 'riesgo de edema cerebral y convulsiones'; }
+		else if (na < 125){ grado = 'Grave (120–124 mEq/L)';  cmt = 'cefalea, náusea, estupor'; }
+		else if (na < 130){ grado = 'Moderada (125–129 mEq/L)'; cmt = 'vigilancia estrecha'; }
+		else               { grado = 'Leve (130–134 mEq/L)';   cmt = 'generalmente asintomática'; }
+		pushSug(`Hiponatremia ${grado}; sodio ${na} mEq/L (${cmt}).`);
+	  } else if (na > 145) {   // Hipernatremia
+		let cmt = na >= 160 ? 'alto riesgo de hemorragia intracraneal' : 'irritabilidad, letargia';
+		pushSug(`Hipernatremia; sodio ${na} mEq/L (${cmt}).`);
+	  }
+	}
+
+	/* ---------- Potasio ---------- */
+	const k = getValue('POTASIO');
+	if (k !== null) {
+	  if (k < 3.5) {           // Hipocalemia
+		let grado, cmt;
+		if (k < 2.5)       { grado = 'Grave (< 2.5 mEq/L)';      cmt = 'riesgo de paro cardiorrespiratorio'; }
+		else if (k < 3.0)  { grado = 'Moderada (2.5–2.9 mEq/L)'; cmt = 'parestesias, debilidad'; }
+		else               { grado = 'Leve (3.0–3.4 mEq/L)';     cmt = 'puede ser asintomática'; }
+		pushSug(`Hipocalemia ${grado}; potasio ${k} mEq/L (${cmt}).`);
+	  } else if (k > 5.4) {    // Hipercalemia
+		let grado, cmt;
+		if (k >= 7.0)      { grado = 'Grave (≥ 7 mEq/L)';    cmt = 'administrar Ca‑gluconato'; }
+		else if (k > 6.0)  { grado = 'Moderada (6.1–6.9 mEq/L)'; cmt = 'onda T picuda, desplazar K+'; }
+		else               { grado = 'Leve (5.5–6.0 mEq/L)';     cmt = 'vigilar ECG'; }
+		pushSug(`Hipercalemia ${grado}; potasio ${k} mEq/L (${cmt}).`);
+	  }
+	}
+
+	/* ---------- Cloro ---------- */
+	const cl = getValue('CLORO');
+	if (cl !== null) {
+	  if (cl < 98) {
+		let cmt = cl < 90 ? 'alcalosis metabólica severa' : 'pérdida GI o diuréticos';
+		pushSug(`Hipocloremia; cloro ${cl} mEq/L (${cmt}).`);
+	  } else if (cl > 108) {
+		let cmt = cl > 115 ? 'acidosis metabólica hiperclorémica severa' : 'sobrecarga de Cl‑ (NaCl 0.9 %)';
+		pushSug(`Hipercloremia; cloro ${cl} mEq/L (${cmt}).`);
+	  }
+	}
+
+	/* ---------- Calcio ---------- */
+	const ca = getValue('CALCIO');
+	if (ca !== null) {
+	  if (ca < 8.5) {          // Hipocalcemia
+		let grado, cmt;
+		if (ca < 7.0)       { grado = 'Grave (< 7 mg/dL)';       cmt = 'tetania, convulsiones'; }
+		else if (ca < 8.0)  { grado = 'Moderada (7.0–7.9 mg/dL)'; cmt = 'calambres, signo de Chvostek'; }
+		else                { grado = 'Leve (8.0–8.4 mg/dL)';    cmt = 'habitualmente asintomática'; }
+		pushSug(`Hipocalcemia ${grado}; calcio ${ca} mg/dL (${cmt}).`);
+	  } else if (ca > 10.5) {  // Hipercalcemia
+		let grado, cmt;
+		if (ca >= 14.0)     { grado = 'Grave / crisis (> 14 mg/dL)'; cmt = 'alteración del sensorio'; }
+		else if (ca >= 12.0){ grado = 'Moderada (12–13.9 mg/dL)';   cmt = 'poliuria, náusea'; }
+		else                { grado = 'Leve (10.6–11.9 mg/dL)';     cmt = 'puede cursar sin síntomas'; }
+		pushSug(`Hipercalcemia ${grado}; calcio ${ca} mg/dL (${cmt}).`);
+	  }
+	}
+
+	/* ---------- Magnesio ---------- */
+	const mg = getValue('MAGNESIO');   // mg/dL
+	if (mg !== null) {
+	  if (mg < 1.7) {                 // Hipomagnesemia
+		let grado, cmt;
+		if (mg < 1.0)      { grado = 'Grave (< 1 mg/dL)';       cmt = 'convulsiones, torsades'; }
+		else if (mg < 1.2) { grado = 'Moderada (1.0–1.19 mg/dL)'; cmt = 'debilidad, arritmias'; }
+		else               { grado = 'Leve (1.2–1.6 mg/dL)';    cmt = 'hipokalemia refractaria'; }
+		pushSug(`Hipomagnesemia ${grado}; magnesio ${mg} mg/dL (${cmt}).`);
+	  } else if (mg > 2.4) {           // Hipermagnesemia
+		let grado, cmt;
+		if (mg > 6)        { grado = 'Grave (> 6 mg/dL)';       cmt = 'bradicardia, paro resp.'; }
+		else if (mg > 4)   { grado = 'Moderada (4.1–6 mg/dL)';  cmt = 'hiporreflexia, hipotensión'; }
+		else               { grado = 'Leve (2.5–4 mg/dL)';      cmt = 'generalmente asintomática'; }
+		pushSug(`Hipermagnesemia ${grado}; magnesio ${mg} mg/dL (${cmt}).`);
+	  }
+	}
+
+
+
+
+
+		  /* ---------- 6. Función renal (creatinina) ---------- */
+		  const crea = getValue('CREATININA');
+		  if (crea !== null && crea > 1.3) {
+			pushSug(`Creatinina ${crea} mg/dL → posible insuficiencia renal aguda o ERC; calcule eGFR.`);
+		  }
+
+		  /* ---------- 7. Hiperbilirrubinemia patrón ---------- */
+		  const bt = getValue('BILIRRUBINA TOTAL');
+		  const bd = getValue('BILIRRUBINA DIRECTA');
+		  if (bt !== null && bd !== null && bt > 1.2) {
+			const directa = (bd / bt) > 0.2;
+			pushSug(`Bilirrubina total ${bt} mg/dL con fracción ${directa?'directa':'indirecta'} predominante → Hiperbilirrubinemia ${directa?'conjugada':'no conjugada'}.`);
+		  }
+
+		  /* ---------- 8. R‑ratio para patrón de daño hepático ---------- */
+		  const alt = getValue('PIRUVICA');   // ALT
+		  const alp = getValue('FOSFATASA ALCALINA');
+		  if (alt!==null && alp!==null) {
+			const R = (alt / ULN.ALT) / (alp / ULN.ALP);
+			if (!isNaN(R)) {
+			  if (R > 5) pushSug(`R‑ratio ${R.toFixed(1)} → Patrón Hepatocelular.`);
+			  else if (R < 2) pushSug(`R‑ratio ${R.toFixed(1)} → Patrón Colestásico.`);
+			  else pushSug(`R‑ratio ${R.toFixed(1)} → Patrón Mixto.`);
+			}
+		  }
+
+		  /* ---------- 9. Amilasa / Lipasa >3×LSN ---------- */
+		  const amilasa = getValue('AMILASA');
+		  const lipasa  = getValue('LIPASA');
+		  if ((amilasa && amilasa > 300) || (lipasa && lipasa > 180)) {
+			pushSug(`Amilasa ${amilasa ?? '–'} U/L / Lipasa ${lipasa ?? '–'} U/L → >3×LSN; Sospechar Pancreatitis aguda.`);
+		  }
+
+		  /* ----------10. Perfil tiroideo ---------- */
+		  const tsh  = getValue('TSH');
+		  const t4l  = getValue('T4 LIBRE');
+		  if (tsh!==null && t4l!==null) {
+			if (tsh > 4.5 && t4l < 0.8)      pushSug('TSH↑ + T4 L↓ → Hipotiroidismo primario.');
+			else if (tsh < 0.4 && t4l > 1.8) pushSug('TSH↓ + T4 L↑ → Hipertiroidismo.');
+			else if (tsh > 4.5 && (t4l>=0.8 && t4l<=1.8)) pushSug('TSH↑ + T4 L normal → Hipotiroidismo Subclínico.');
+		  }
+
+		  /* ----------11. Función hepática sintética ---------- */
+		  const inr = getValue('INR');
+		  const alb = getValue('ALBUMINA');
+		  if ((inr!==null && inr > 1.5) || (alb!==null && alb < 3.0)) {
+			pushSug(`INR ${inr ?? '–'} / Albúmina ${alb ?? '–'} g/dL → Deterioro Hepático Sintético.`);
+		  }
+
+		  /* ----------12. Perfil lipídico ---------- */
+		  const ldl = getValue('LDL COLESTEROL');
+		  const tg  = getValue('TRIGLICERIDOS');
+		  if (ldl!==null && ldl >= 160) {
+			pushSug(`LDL ${ldl} mg/dL → Hipercolesterolemia (riesgo CV alto${ldl>=190?', muy alto':''}).`);
+		  }
+		  if (tg!==null && tg >= 150) {
+			pushSug(`Triglicéridos ${tg} mg/dL → Hipertrigliceridemia.`);
+		  }
+
+		  /* ----------13. Enzimas cardíacas ---------- */
+		  const ckmb = getValue('CK-MB');
+		  const trop = getValue('TROPONINA');
+		  if (trop!==null && trop > ULN.Troponina) {
+			pushSug(`Troponina ${trop} ng/mL → posible **IAM** (eleve & correlacione clínicamente).`);
+		  } else if (ckmb!==null && ckmb > ULN.CKMB) {
+			pushSug(`CK‑MB ${ckmb} U/L → elevado; vigilar síndrome coronario.`);
+		  }
+
+		/* ----------14. Procalcitonina / NT‑proBNP ---------- */
+		const pct = getValue('PROCALCITONINA');
+		if (pct !== null) {
+		  let interpretacion;
+		  if (pct < 0.10)        interpretacion = 'Bajo riesgo de infección bacteriana';
+		  else if (pct < 0.25)   interpretacion = 'Infeccion bacteriana poco probable';
+		  else if (pct < 0.50)   interpretacion = 'Posible infección localizada; valorar antibióticos';
+		  else if (pct < 2.0)    interpretacion = 'Infección bacteriana / sepsis probable';
+		  else if (pct < 10.0)   interpretacion = 'Alto riesgo de sepsis grave';
+		  else                   interpretacion = 'Alto riesgo de choque séptico';
+		  pushSug(`Procalcitonina ${pct} ng/mL → ${interpretacion}.`);
+		}
+
+		const proBnp = getValue('NT-PROBNP');
+		if (proBnp !== null && proBnp > 300) {
+		  pushSug(`NT‑proBNP ${proBnp} pg/mL → Sugiere insuficiencia cardíaca (correlacionar con edad).`);
+		}
+
+		/*tiempos de coagulacion*/
+		/* ----------15. Tiempos de Coagulación ---------- */
+		const tp = getValue('TIEMPO DE PROTOMBINA');
+		const ttp = getValue('TIEMPO DE TROMBOPLASTINA PARCIAL');
+		const inrVal = getValue('INR');
+
+		// INR
+		if (inrVal !== null) {
+		  if (inrVal > 1.5 && inrVal <= 2.0) {
+			pushSug(`INR ${inrVal} → prolongado; riesgo de sangrado leve, valorar función hepática o anticoagulación.`);
+		  } else if (inrVal > 2.0 && inrVal <= 3.0) {
+			pushSug(`INR ${inrVal} → rango terapéutico usual para anticoagulación oral (ej. warfarina).`);
+		  } else if (inrVal > 3.0) {
+			pushSug(`INR ${inrVal} → riesgo elevado de sangrado espontáneo.`);
+		  }
+		}
+
+		// TP
+		if (tp !== null) {
+		  if (tp > 15) {
+			pushSug(`TP ${tp} seg → Tiempo de protrombina prolongado; considerar hepatopatía o déficit de factores II, V, VII, X.`);
+		  }
+		}
+
+		// TTP
+		if (ttp !== null) {
+		  if (ttp > 35) {
+			pushSug(`TTP ${ttp} seg → Tiempo de tromboplastina parcial prolongado; sospechar déficit de factores intrínsecos (VIII, IX, XI) o uso de heparina.`);
+		  }
+		}
+
+
+		  /* ---------- render ----------- */
+		  suggestionsDiv.innerHTML = suggestions.length
+			? `<ul style="padding-left:18px;margin:0;">${suggestions.map(t=>`<li>${t}</li>`).join('')}</ul>`
+			: '<em>No se generaron sugerencias automáticas.</em>';}
+
+    /**************** INTERFAZ Y EVENTOS ****************/
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', async e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (!file || file.type !== 'application/pdf') {
+        alert('Por favor, arrastra un archivo PDF válido.');
+        return;
+      }
+	  /* ▶️  Sonido de éxito ya “pre‑aprobado” por el gesto de usuario */
+	  const okSound = document.getElementById('pdfOk');
+	  okSound.currentTime = 0;          // por si el usuario carga 2 PDF seguidos
+	  okSound.play().catch(()=>{});     // ignora si la pestaña está silenciada
+		  
+      const reader = new FileReader();
+      reader.onload = async function () {
+	  try {
+		const typedArray = new Uint8Array(this.result);
+		const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+
+		let textoCompleto = '';
+		for (let i = 1; i <= pdf.numPages; i++) {
+		  const page = await pdf.getPage(i);
+		  const textContent = await page.getTextContent();
+		  textoCompleto += textContent.items.map(item => item.str).join(' ') + '\n';
+		}
+
+		textoPDF = textoCompleto;
+
+		// Extraer nombre del paciente
+		const nombreExtraido = parsePatientName(textoCompleto);
+		if (nombreExtraido) {
+		  botonPaciente.textContent = nombreExtraido;
+		} else {
+		  botonPaciente.textContent = 'Nombre no encontrado';
+		}
+
+		// Extraer fecha de ingreso
+		const fechaExtraida = parseIngresoDate(textoCompleto);
+		if (fechaExtraida) {
+		  botonFechaIngreso.textContent = fechaExtraida;
+		} else {
+		  botonFechaIngreso.textContent = 'Fecha no encontrada';
+		}
+
+		// Inicializar visor de PDF
+		pdfDoc = pdf;
+		currentPage = 1;
+		totalPages = pdf.numPages;
+		await renderPage(currentPage); 
+
+		/*mostrar visor y colapsar un poco el dropzone */
+		document.getElementById('pdfViewer').style.display = 'flex';
+		document.querySelector('.col-right').style.display = 'flex';
+		dropzone.style.flex = '0 0 auto';   // el dropzone se reduce
+
+		// Reiniciar secciones
+		sectionsOrder.forEach(s => {
+		  sectionsData[s] = { items: [], active: false };
+		});
+
+		parseLabResults();
+		refreshBadges();
+		refreshSummary();
+		analyzeResults();
+		document.getElementById('pdfOk').play().catch(()=>{/* navegación automática bloqueó autoplay */});
+
+
+		const debugTextArea = document.getElementById('debugText');
+		if (debugTextArea) {
+		  debugTextArea.value = textoPDF;
+		}
+
+
+	  } catch (error) {
+		console.error('Error al procesar el PDF:', error);
+		alert('Ocurrió un error al procesar el PDF.');
+	  }
+	};
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Badge especial para modo detallado
+	const modeBadge = document.createElement('div');
+	modeBadge.className = 'study-badge mode-badge';   // ← sin “inactive”
+    modeBadge.textContent = 'Modo Detallado';
+    modeBadge.addEventListener('click', () => {
+      detailedMode = !detailedMode;
+      if (detailedMode) {
+        modeBadge.textContent = 'Modo Detallado ON';
+        modeBadge.classList.add('active');
+      } else {
+        modeBadge.textContent = 'Modo Detallado';
+        modeBadge.classList.remove('active');
+      }
+      refreshSummary();
+    });
+
+    // Función para crear/actualizar los badges basados en sectionsData
+    function refreshBadges() {
+      detectedStudiesDiv.innerHTML = '';
+      sectionsOrder.forEach(sectionTitle => {
+        const sec = sectionsData[sectionTitle];
+        if (!sec.items || sec.items.length === 0) return;
+        const badge = document.createElement('div');
+        badge.className = 'study-badge';
+        if (!sec.active) {
+          badge.classList.add('inactive');
+        }
+        badge.textContent = sectionTitle;
+        badge.addEventListener('click', () => {
+          sec.active = !sec.active;
+          badge.classList.toggle('inactive');
+          refreshSummary();
+        });
+        detectedStudiesDiv.appendChild(badge);
+      });
+      // Agregar el badge de modo detallado al final
+      detectedStudiesDiv.appendChild(modeBadge);
+    }
+
+    // Reconstruye el texto de salida según las secciones activas y el modo
+    function refreshSummary() {
+      let finalText = '';
+      sectionsOrder.forEach(sectionTitle => {
+        const sec = sectionsData[sectionTitle];
+        if (sec.active && sec.items.length > 0) {
+          const itemsText = sec.items.map(item => {
+            return detailedMode 
+              ? `${item.full} ${item.value}${item.units ? ' ' + item.units : ''}` 
+              : `${item.short} ${item.value}`;
+          }).join(', ');
+          finalText += `${sectionTitle}:\n${itemsText}\n\n`;
+        }
+      });
+      resultadoTextarea.value = finalText.trim();
+    }
+
+    // Botones para copiar y borrar
+    copyButton.addEventListener('click', () => {
+      navigator.clipboard.writeText(resultadoTextarea.value)
+        .then(() => alert('¡Texto copiado al portapapeles!'))
+        .catch(err => console.error('Error al copiar texto: ', err));
+    });
+
+    clearButton.addEventListener('click', () => {
+      resultadoTextarea.value = '';
+    });
+	
+	const resetButton = document.getElementById('resetButton');
+
+	resetButton.addEventListener('click', () => {
+	  // Limpiar resultados
+	  resultadoTextarea.value = '';
+	  botonPaciente.textContent = '';
+	  botonFechaIngreso.textContent = '';
+	  suggestionsDiv.innerHTML = '<em>Próximamente sugerencias…</em>';
+	  detectedStudiesDiv.innerHTML = '';
+
+	  // Ocultar PDF y sugerencias
+	  document.getElementById('pdfViewer').style.display = 'none';
+	  document.querySelector('.col-right').style.display = 'none';
+
+	  // Restaurar tamaño de dropzone
+	  dropzone.style.flex = '1 1 0';
+
+	  // Resetear canvas
+	  const canvas = document.getElementById('pdfPreview');
+	  if (canvas) {
+		const ctx = canvas.getContext('2d');
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+	  }
+
+	  // Resetear PDF
+	  pdfDoc = null;
+	  textoPDF = '';
+	  sectionsOrder.forEach(s => {
+		sectionsData[s] = { items: [], active: false };
+	  });
+
+	  // Si hay algún badge de modo detallado activo, quitarlo
+	  modeBadge.classList.remove('active');
+	  modeBadge.textContent = 'Modo Detallado';
+	  detailedMode = false;
+	});
+
+	
+	
+	const toggleButton = document.getElementById('toggleTheme');
+	const availableThemes = ['dark', 'day', 'sunset'];
+	const themeIcons = {
+	  dark: '🌚',
+	  day: '🌅️',
+	  sunset: '🌞'
+	};
+
+	let currentTheme = localStorage.getItem('temaSeleccionado') || 'dark';
+
+	function applyTheme(theme) {
+	  document.body.classList.remove('day', 'dark', 'sunset');
+	  if (theme === 'day') document.body.classList.add('day');
+	  if (theme === 'dark') document.body.classList.add('dark');
+	  // sunset no requiere clase porque es el tema base
+	  toggleButton.textContent = themeIcons[theme];
+	  localStorage.setItem('temaSeleccionado', theme);
+	}
+
+	applyTheme(currentTheme);
+
+	toggleButton.addEventListener('click', () => {
+	  let nextIndex = (availableThemes.indexOf(currentTheme) + 1) % availableThemes.length;
+	  currentTheme = availableThemes[nextIndex];
+	  applyTheme(currentTheme);
+	});
+
+
+	async function renderPage(pageNum) {
+	  const canvas = document.getElementById('pdfPreview');
+	  const ctx = canvas.getContext('2d');
+
+	  const page = await pdfDoc.getPage(pageNum);
+
+	  const maxCanvasWidth = document.getElementById('dropzone').clientWidth;
+	  const unscaledViewport = page.getViewport({ scale: 1 });
+	  const dpiBoost = 3;
+	  const scale = (maxCanvasWidth / unscaledViewport.width) * dpiBoost;
+	  const viewport = page.getViewport({ scale });
+
+	  canvas.width = viewport.width;
+	  canvas.height = viewport.height;
+
+	  const renderContext = {
+		canvasContext: ctx,
+		viewport: viewport
+	  };
+
+	  await page.render(renderContext).promise;
+	}
+
+	document.getElementById('prevPage').addEventListener('click', () => {
+	  if (currentPage > 1) {
+		currentPage--;
+		renderPage(currentPage);
+	  }
+	});
+
+	document.getElementById('nextPage').addEventListener('click', () => {
+	  if (currentPage < totalPages) {
+		currentPage++;
+		renderPage(currentPage);
+	  }
+	});
+	
+</script>
+<script>
+  document.querySelectorAll('.tubo-ensayo').forEach(tubo => {
+    tubo.addEventListener('click', () => {
+      tubo.classList.add('shake');
+
+      const burbujeo = document.getElementById('bubbleSound');
+      if (burbujeo) {
+        burbujeo.currentTime = 0;
+        burbujeo.play().catch(() => {});
+      }
+
+      setTimeout(() => {
+        tubo.classList.remove('shake');
+      }, 6000); // duración igual a la animación
+    });
+  });
+</script>
+
+
+
+
+</body>
+</html>
