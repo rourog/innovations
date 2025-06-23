@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <title>Dosify Alpha</title>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Sour+Gummy:wght@100..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --naranja: #F9B872;
+      --amarillo: #FAE7A5;
+      --azul-polvo: #B6E1E7;
+      --gris-azulado: #96C2DB;
+      --blanco: #FFFFFF;
+    }
+    body {
+      margin: 0;
+      font-family: 'Sour Gummy', sans-serif;
+      background-color: var(--amarillo);
+      color: #333;
+      transition: background-color 0.3s ease;
+    }
+    body.dark {
+      background-color: #121212;
+      color: #eee;
+    }
+    body.dark header { background-color: #1e1e1e; color: #eee; }
+    body.dark .modo-toggle, body.dark .copy-button { background-color: #333; color: #eee; }
+    body.dark .output { background: #1e1e1e; color: #eee; border-color: #555; }
+    body.dark .extras { background: #1a1a1a; color: #ddd; border-color: #444; }
+
+    body.day {
+      background-color: #E5EDF1;
+      color: #333;
+    }
+    body.day header { background-color: #96C2DB; color: #fff; }
+    body.day .modo-toggle, body.day .copy-button { background-color: #96C2DB; color: #fff; }
+    body.day .output { background: #ffffff; color: #222; border-color: #ccc; }
+    body.day .extras { background: #ffffff; color: #222; border-color: #ccc; }
+
+    body.sunset header { background-color: #F9B872; color: #333; }
+    body.sunset .modo-toggle, body.sunset .copy-button { background-color: #F9B872; color: #333; }
+    body.sunset .output { background: #fff8e6; color: #222; border-color: #e0c28b; }
+    body.sunset .extras { background: #fff8e6; color: #222; border-color: #e0c28b; }
+
+	header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 10px 16px;
+		font-size: 1.5rem;
+		}
+	.header-left {
+		flex: 1;
+		font-weight: bold;
+		}
+
+	.header-right {
+		display: flex;
+		gap: 8px;
+		justify-content: flex-end;
+		align-items: center;
+		}
+
+
+    .theme-toggle {
+      font-size: 1.2rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    main { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    label { font-weight: bold; margin-top: 12px; display: block; }
+    input { font-size: 1rem; padding: 6px 10px; width: 100%; box-sizing: border-box; }
+
+	.modo-toggle, .copy-button, .theme-toggle {
+		padding: 12px 16px;
+		font-size: 1.1rem;
+		font-weight: bold;
+		border: none;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.1s ease;
+	}
+
+    .med-section {
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+    .output {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+      white-space: pre-line;
+    }
+    .extras {
+      background: #f4f4f4;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 0.95rem;
+    }
+
+	/* Feedback al presionar en TODOS los botones */
+	button:active {
+	  transform: scale(0.95);
+	  box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+	}
+
+	/* Transición global */
+	button {
+	  transition: all 0.1s ease;
+	}
+
+	.bottom-bar {
+	  position: fixed;
+	  bottom: 0;
+	  left: 0;
+	  right: 0;
+	  display: flex;
+	  justify-content: space-around;
+	  padding: 12px;
+	  background-color: #fff;
+	  border-top: 1px solid #ccc;
+	  z-index: 999;
+	}
+
+	a, button {
+	  touch-action: manipulation;
+	}
+
+	#contenedorReloj {
+	  font-family: 'Space Mono', monospace;
+	  font-size: 3rem;
+	  margin: 30px auto;
+	  letter-spacing: 2px;
+	}
+
+
+	.boton-estilo {
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	  user-select: none;
+	  touch-action: manipulation;
+	  -webkit-tap-highlight-color: transparent;
+
+	  font-size: 1.8rem;            /* íconos ligeramente más pequeños que antes */
+	  padding: 8px;                /* reduce un poco el “relleno” interno */
+	  min-width: 32px;              /* ancho fijo agradable */
+	  min-height: 32px;             /* alto fijo agradable */
+	  border: none;
+	  border-radius: 6px;          /* ligeramente más redondeado */
+	  cursor: pointer;
+	  transition: transform 0.1s ease,
+				  background-color 0.3s ease,
+				  box-shadow 0.2s ease;
+	  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+	  color: inherit;
+	}
+
+	/* Feedback al presionar */
+	.boton-estilo:active {
+	  transform: scale(0.90);
+	  box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
+	  filter: brightness(0.94);
+	}
+
+	/* Temas — mismos colores que .theme-toggle */
+	body.dark .boton-estilo,
+	body.dark .theme-toggle {
+	  background-color: #333;
+	  color: #eee;
+	}
+	body.day .boton-estilo,
+	body.day .theme-toggle {
+	  background-color: #96C2DB;
+	  color: #fff;
+	}
+	body.sunset .boton-estilo,
+	body.sunset .theme-toggle {
+	  background-color: #F9B872;
+	  color: #333;
+	}
+
+	/* fondo rojo mientras está pendiente */
+	.alerta {
+	  background-color: #e63946 !important;
+	  color: #fff !important;
+	}
+
+
+	.site-footer {
+	  position: fixed;    /* lo fija en la ventana */
+	  bottom: 0;          /* siempre al fondo */
+	  left: 0;
+	  width: 100%;        /* ocupa todo el ancho */
+	  text-align: center;
+	  padding: 12px 0;
+	  font-size: 0.9rem;
+	  color: inherit;     /* hereda color según tema */
+	  background: none;   /* puedes poner un color si quieres */
+	  z-index: 1000;      /* sobre el resto de contenido */
+	}
+
+	/* Para que el contenido no quede oculto tras el footer */
+	main {
+	  padding-bottom: 48px; /* al menos la altura del footer */
+	}
+
+	body.dark .site-footer   { background-color: #1e1e1e; color: #eee; }
+	body.day  .site-footer   { background-color: #96C2DB; color: #fff; }
+	body.sunset .site-footer { background-color: #F9B872; color: #333; }
+
+
+
+	}
+
+  </style>
+</head>
+<body onload="document.getElementById('peso').focus()">
+	<header>
+	  <div class="header-left">💉 Dosify Beta</div>
+	  <div class="header-right">
+		<button class="theme-toggle" onclick="alternarVista()">⏱</button>
+		<button id="themeButton" class="theme-toggle" onclick="cambiarTema()">🧪</button>
+		<button class="theme-toggle" onclick="resetearFormulario()">🔄</button>
+	  </div>
+	</header>
+
+
+  <main  class="row">
+  <div id="seccionCalculadora">
+
+      <div>
+        <label for="peso">Peso (kg)</label>
+        <input type="number" id="peso" placeholder="Ej: 70" oninput="calcularDosis()" />
+      </div>
+      <div>
+        <label for="talla">Talla (cm)</label>
+        <input type="number" id="talla" placeholder="Ej: 170" oninput="calcularDosis()" />
+      </div>
+
+
+    <label for="modoToggle">Modo de administración</label>
+    <button id="modoToggle" class="modo-toggle" onclick="alternarModo()">Infusión continua</button>
+
+    <div class="med-section">
+      <h3>Dosis sugeridas:</h3>
+      <div class="output" id="resultados">Ingresa los datos para calcular dosis...</div>
+
+    </div>
+
+	<div class="extras" id="infoExtras">
+		<strong>Parámetros complementarios:</strong><br />
+		Peso ideal: — kg<br />
+		Superficie corporal: — m²<br />
+		Requerimiento basal de líquidos: — mL/día
+	</div>
+
+	<div class="extras" id="infoCateteresFormula">
+		<strong>Catéteres por fórmula (según talla):</strong><br />
+		Yugular derecha: — cm<br />
+		Yugular izquierda: — cm<br />
+		Subclavia derecha: — cm<br />
+		Subclavia izquierda: — cm
+	</div>
+</div>
+
+
+
+<div id="seccionReloj" style="display: none; text-align: center; padding: 20px;">
+  <h2>⏱ Reloj de RCP</h2>
+
+  <div id="contenedorReloj" style="font-size: 3rem; margin: 20px;">00:00.000</div>
+
+<div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 20px;">
+  <div id="botonReloj" class="boton-estilo" onclick="alternarReloj()">▶️</div>
+  <div class="boton-estilo" onclick="reiniciarReloj()">🔄</div>
+</div>
+
+<div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+  <div id="btnAdrenalina" class="boton-estilo" onclick="handleEvento('Adrenalina')">💉</div>
+  <div id="btnCompresor" class="boton-estilo" onclick="handleEvento('Cambio de compresor')">🔄</div>
+  <div id="btnRitmo"     class="boton-estilo" onclick="handleEvento('Evaluar ritmo')">🫀</div>
+  <div id="btnDebug"     class="boton-estilo" onclick="alternarDebug()">🐞</div>
+</div>
+
+<!-- Controls del metrónomo -->
+<div style="display: flex; justify-content: center; gap: 10px; margin-top: 12px;">
+  <button id="bpmBtn"       class="boton-estilo">120 BPM</button>
+  <button id="metronomoBtn" class="boton-estilo">▶️ Iniciar</button>
+</div>
+
+
+
+
+  <div style="margin-top: 30px; text-align: left;">
+    <h4>Eventos:</h4>
+    <ul id="listaEventos" style="list-style: none; padding-left: 0;"></ul>
+  </div>
+  
+  <div style="margin-top: 10px;">
+
+</div>
+
+</div>
+
+
+
+<footer class="site-footer">
+  Rourog Innovations © 2025. Todos los derechos reservados.
+</footer>
+
+
+  </main>
+
+
+  <script>
+    const temas = ['dark', 'sunset', 'day'];
+    let temaActual = 1;
+    let modo = 'infusion';
+
+    const temaGuardado = localStorage.getItem('temaSeleccionado');
+    if (temaGuardado && temas.includes(temaGuardado)) {
+      document.body.className = temaGuardado;
+      temaActual = temas.indexOf(temaGuardado);
+    } else {
+      document.body.className = temas[temaActual];
+    }
+
+	function cambiarTema() {
+		temaActual = (temaActual + 1) % temas.length;
+		const nuevoTema = temas[temaActual];
+		document.body.className = nuevoTema;
+		localStorage.setItem('temaSeleccionado', nuevoTema);
+
+		const btn = document.getElementById('themeButton');
+		if (temas[temaActual] === 'dark') btn.textContent = '🧬';
+		else if (temas[temaActual] === 'sunset') btn.textContent = '💉';
+		else btn.textContent = '🩺';
+
+	}
+
+
+    function alternarModo() {
+      modo = (modo === 'infusion') ? 'bolo' : 'infusion';
+      document.getElementById('modoToggle').textContent = (modo === 'infusion') ? 'Infusión continua' : 'Inducción (bolo)';
+      calcularDosis();
+    }
+
+    function copiarResultados() {
+      const text = document.getElementById("resultados").textContent;
+      navigator.clipboard.writeText(text).then(() => alert("Resultados copiados al portapapeles"));
+    }
+
+    function copiarExtras() {
+      const texto = document.getElementById("infoExtras").innerText;
+      navigator.clipboard.writeText(texto).then(() => alert("Parámetros copiados al portapapeles"));
+    }
+
+    function calcularParametrosExtras(peso, talla) {
+      let pesoIdeal = 0.9 * (talla - 100);
+      let superficie = 0.007184 * Math.pow(peso, 0.425) * Math.pow(talla, 0.725);
+      let reqBasal = 0;
+      if (peso <= 10) reqBasal = peso * 100;
+      else if (peso <= 20) reqBasal = 1000 + (peso - 10) * 50;
+      else reqBasal = 1500 + (peso - 20) * 20;
+      return {
+        pesoIdeal: pesoIdeal.toFixed(1),
+        superficie: superficie.toFixed(2),
+        reqBasal: Math.round(reqBasal)
+      };
+    }
+
+    function calcularDosis() {
+      const peso = parseFloat(document.getElementById('peso').value);
+      const talla = parseFloat(document.getElementById('talla').value);
+      const resultados = document.getElementById('resultados');
+      const extras = document.getElementById('infoExtras');
+
+      if (!peso || peso <= 0) {
+        resultados.textContent = 'Ingresa un peso válido.';
+        extras.innerHTML = '<strong>Parámetros complementarios:</strong><br />Peso ideal: — kg<br />Superficie corporal: — m²<br />Requerimiento basal de líquidos: — mL/día';
+        return;
+      }
+
+      const { pesoIdeal, superficie, reqBasal } = calcularParametrosExtras(peso, talla);
+      extras.innerHTML = `<strong>Parámetros complementarios:</strong><br />Peso ideal: ${pesoIdeal} kg<br />Superficie corporal: ${superficie} m²<br />Requerimiento basal de líquidos: ${reqBasal} mL/día`;
+
+      let salida = '';
+      if (modo === 'infusion') {
+        const propofol = { low: 1, high: 3, conc: 10, desc: 'Propofol al 1% (10 mg/mL)' };
+        const midazolam = { low: 0.02, high: 0.1, conc: 1, desc: '100 mg en 100 cc Sol. Salina 0.9% (1mg/ml)' };
+        const fentanilo = { low: 0.5, high: 2, conc: 10, desc: '500 mcg en 100 cc Sol. Salina 0.9% (5 mcg/mL)' };
+        const norepi = { low: 0.05, high: 1, conc: 160, desc: '16 mg en 100 cc Sol. Salina 0.9% (160 mcg/mL)', perMinute: true };
+        const dex = { low: 0.2, high: 1.4, conc: 4, desc: '400 mcg en 100 cc Sol. Salina 0.9% (4 mcg/mL)' };
+
+        function calc(med, unidad, sufijo) {
+          const mult = med.perMinute ? 60 : 1;
+          const volLow = ((med.low * peso * mult) / med.conc).toFixed(1);
+          const volHigh = ((med.high * peso * mult) / med.conc).toFixed(1);
+          return `${sufijo}: ${volLow}–${volHigh} cc/h (${med.low.toFixed(2)}–${med.high.toFixed(2)} ${unidad})\n→ Disuelto en: ${med.desc}`;
+        }
+
+        salida += calc(propofol, 'mg/kg/h', 'Propofol') + "\n\n";
+        salida += calc(midazolam, 'mg/kg/h', 'Midazolam') + "\n\n";
+        salida += calc(fentanilo, 'mcg/kg/h', 'Fentanilo') + "\n\n";
+        salida += calc(norepi, 'mcg/kg/min', 'Norepinefrina') + "\n\n";
+        salida += calc(dex, 'mcg/kg/h', 'Dexmedetomidina');
+		} else {
+		  // Dosis en bolo por peso
+		  const propofolLow = 2.0, propofolHigh = 2.5;
+		  const midazolamLow = 0.05, midazolamHigh = 0.1;
+		  const fentaniloLow = 1, fentaniloHigh = 2;
+
+		  // Concentraciones en ampolla
+		  const concPropofol = 10;     // mg/mL
+		  const concMidazolam = 5;     // mg/mL
+		  const concFentanilo = 50;    // mcg/mL
+
+		  // Cálculos
+		  const propofol1 = (peso * propofolLow);
+		  const propofol2 = (peso * propofolHigh);
+		  const midazolam1 = (peso * midazolamLow);
+		  const midazolam2 = (peso * midazolamHigh);
+		  const fentanilo1 = (peso * fentaniloLow);
+		  const fentanilo2 = (peso * fentaniloHigh);
+
+		  salida += `Propofol inducción:\n` +
+					`  ${propofolLow} mg/kg → ${propofol1.toFixed(0)} mg ≈ ${(propofol1 / concPropofol).toFixed(1)} cc\n` +
+					`  ${propofolHigh} mg/kg → ${propofol2.toFixed(0)} mg ≈ ${(propofol2 / concPropofol).toFixed(1)} cc\n\n`;
+
+		// Midazolam bolo con tres presentaciones
+		salida += `Midazolam bolo:\n` +
+					`  ${midazolamLow} mg/kg → ${midazolam1.toFixed(1)} mg\n` +
+					`    ≈ ${(midazolam1 / 1).toFixed(1)} cc (1 mg/mL - 5mg/5mL)\n` +
+					`    ≈ ${(midazolam1 / 5).toFixed(1)} cc (5 mg/mL - 15mg/3mL o 50mg/10mL)\n\n` +
+
+					`  ${midazolamHigh} mg/kg → ${midazolam2.toFixed(1)} mg\n` +
+					`    ≈ ${(midazolam2 / 1).toFixed(1)} cc (1 mg/mL - 5mg/5mL)\n` +
+					`    ≈ ${(midazolam2 / 5).toFixed(1)} cc (5 mg/mL - 15mg/3mL o 50mg/10mL)\n\n`;
+
+		  salida += `Fentanilo bolo:\n` +
+					`  ${fentaniloLow} mcg/kg → ${fentanilo1.toFixed(0)} mcg ≈ ${(fentanilo1 / concFentanilo).toFixed(1)} cc\n` +
+					`  ${fentaniloHigh} mcg/kg → ${fentanilo2.toFixed(0)} mcg ≈ ${(fentanilo2 / concFentanilo).toFixed(1)} cc`;
+		}
+
+
+      resultados.textContent = salida;
+	  
+	  // CATÉTERES por fórmula (según talla)
+		const infoFormula = document.getElementById('infoCateteresFormula');
+		let yd = '—', yi = '—', sd = '—', si = '—';
+
+		if (talla > 0) {
+		  const base = talla / 10;
+		  yd = `${(base - 1).toFixed(1)} cm`;
+		  yi = `${(base + 4).toFixed(1)} cm`;
+		  sd = `${(base - 2).toFixed(1)} cm`;
+		  si = `${(base + 2).toFixed(1)} cm`;
+		}
+
+		infoFormula.innerHTML = `<strong>Catéteres por fórmula (según talla):</strong><br />
+		Yugular derecha: ${yd}<br />
+		Yugular izquierda: ${yi}<br />
+		Subclavia derecha: ${sd}<br />
+		Subclavia izquierda: ${si}`;
+
+			  
+    }
+
+// Funcion para resetear el formulario
+	function resetearFormulario() {
+		document.getElementById('peso').value = '';
+		document.getElementById('talla').value = '';
+		document.getElementById('resultados').textContent = 'Ingresa los datos para calcular dosis...';
+		document.getElementById('infoExtras').innerHTML = '<strong>Parámetros complementarios:</strong><br />Peso ideal: — kg<br />Superficie corporal: — m²<br />Requerimiento basal de líquidos: — mL/día';
+		document.getElementById('infoCateteresFormula').innerHTML = '<strong>Catéteres por fórmula (según talla):</strong><br />Yugular derecha: — cm<br />Yugular izquierda: — cm<br />Subclavia derecha: — cm<br />Subclavia izquierda: — cm';
+	}
+
+	let modoVista = 'calculadora'; // estado inicial
+
+	function alternarVista() {
+	  const calc = document.getElementById('seccionCalculadora');
+	  const reloj = document.getElementById('seccionReloj');
+
+	  if (modoVista === 'calculadora') {
+		calc.style.display = 'none';
+		reloj.style.display = 'block';
+		modoVista = 'reloj';
+	  } else {
+		reloj.style.display = 'none';
+		calc.style.display = 'block';
+		modoVista = 'calculadora';
+	  }
+	}
+
+
+  </script>
+	<script>
+	const bpmModes        = [100, 110, 120];
+	let   currentBpmIndex = 2;               // arranca en 120 BPM
+	let metronomoInterval = null;
+
+	const clickAudio        = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+	const adrenalinaAudio   = new Audio('https://actions.google.com/sounds/v1/alarms/spaceship_alarm.ogg');
+	const compresorAudio    = new Audio('https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg');
+
+
+	const intervaloAdrenalina = 180; // 3 minutos
+	const intervaloCompresor = 120;  // 2 minutos
+
+	let tiempoInicio = null;
+	let tiempoActual = 0; // en milisegundos
+	let debug = false; // modo normal por defecto
+	let segundos = 0;
+	let intervalo = null;
+	let proximoAdrenalina = intervaloAdrenalina;
+	let proximoCompresor  = intervaloCompresor;
+
+	function cycleBpm() {
+	  currentBpmIndex = (currentBpmIndex + 1) % bpmModes.length;
+	  document.getElementById('bpmBtn').textContent = bpmModes[currentBpmIndex] + ' BPM';
+
+	  // Si el metrónomo está corriendo, reinicia con la nueva velocidad
+	  if (metronomoInterval) {
+		clearInterval(metronomoInterval);
+		startMetronome();
+	  }
+	}
+	document.getElementById('bpmBtn').onclick = cycleBpm;
+
+
+	function actualizarReloj() {
+	  const reloj = document.getElementById('contenedorReloj');
+	  const min = Math.floor(segundos / 60).toString().padStart(2, '0');
+	  const sec = (segundos % 60).toString().padStart(2, '0');
+	  reloj.textContent = `${min}:${sec}`;
+	}
+
+	function iniciarReloj() {
+	  if (!intervalo) {
+		tiempoInicio = performance.now() - tiempoActual;
+		intervalo = requestAnimationFrame(tick);
+	  }
+	}
+
+
+
+function tick(timestamp) {
+  if (!tiempoInicio) return;
+
+  const factor         = debug ? 10 : 1;
+  tiempoActual         = timestamp - tiempoInicio;
+  const tiempoSimulado = tiempoActual * factor;
+
+  // — Primer paso: calcular el local
+  const segundosSimulados = Math.floor(tiempoSimulado / 1000);
+  // — Segundo paso: actualizar la variable global
+  segundos = segundosSimulados;
+
+  const milis = Math.floor(tiempoSimulado % 1000);
+  const min   = Math.floor(segundosSimulados / 60).toString().padStart(2,'0');
+  const sec   = (segundosSimulados % 60).toString().padStart(2,'0');
+  const ms    = milis.toString().padStart(3,'0');
+
+  document.getElementById('contenedorReloj')
+          .textContent = `${min}:${sec}.${ms}`;
+
+  if (segundosSimulados >= proximoAdrenalina) {
+    const btnA = document.getElementById('btnAdrenalina');
+    if (!btnA.classList.contains('alerta')) {
+      btnA.classList.add('alerta');
+      adrenalinaAudio.currentTime = 0;
+      adrenalinaAudio.play();
+    }
+  }
+  if (segundosSimulados >= proximoCompresor) {
+    const btnC = document.getElementById('btnCompresor');
+    if (!btnC.classList.contains('alerta')) {
+      btnC.classList.add('alerta');
+      compresorAudio.currentTime = 0;
+      compresorAudio.play();
+    }
+  }
+  intervalo = requestAnimationFrame(tick);
+}
+
+
+
+	function pausarReloj() {
+	  if (intervalo) {
+		cancelAnimationFrame(intervalo);
+		intervalo = null;
+		tiempoInicio = null;
+	  }
+	}
+
+
+	function reiniciarReloj() {
+	  pausarReloj();
+	  tiempoActual = 0;
+	  segundos = 0;
+	  tiempoInicio = null;
+	  document.getElementById('contenedorReloj').textContent = '00:00.000';
+	  document.getElementById('listaEventos').innerHTML = '';
+	  relojCorriendo = false;
+	  document.getElementById('botonReloj').textContent = '▶️ Iniciar';
+	}
+
+	function obtenerFechaHora() {
+	  const now = new Date();
+	  const fecha = now.toLocaleDateString('es-ES');       // e.g. "24/4/2025"
+	  const hora  = now.toLocaleTimeString('es-ES');       // e.g. "14:35:07"
+	  return `${fecha} ${hora}`;
+	}
+
+	function registrarEvento(evento) {
+	  const fechaHora = obtenerFechaHora();
+	  const crono     = document.getElementById('contenedorReloj').textContent;
+	  const lista     = document.getElementById('listaEventos');
+	  const li        = document.createElement('li');
+	  li.textContent  = `${fechaHora} — ${crono} — ${evento}`;
+	  lista.appendChild(li);
+	}
+
+
+	function notificarEvento(texto) {
+	  const fechaHora = obtenerFechaHora();
+	  const crono     = document.getElementById('contenedorReloj').textContent;
+	  const lista     = document.getElementById('listaEventos');
+	  const li        = document.createElement('li');
+	  li.textContent  = `${fechaHora} — ${crono} — ${texto}`;
+	  // estilos visuales…
+	  li.style.background   = '#ffefc0';
+	  li.style.padding      = '6px';
+	  li.style.marginTop    = '6px';
+	  li.style.border       = '1px solid #f4c430';
+	  li.style.borderRadius = '5px';
+	  li.style.fontWeight   = 'bold';
+	  lista.appendChild(li);
+
+	  // Sonido diferenciado:
+	  if (texto.includes('Adrenalina')) {
+		adrenalinaAudio.currentTime = 0;
+		adrenalinaAudio.play();
+	  } else if (texto.includes('Compresor')) {
+		compresorAudio.currentTime = 0;
+		compresorAudio.play();
+	  } else {
+		clickAudio.currentTime = 0;
+		clickAudio.play();
+	  }
+	}  
+
+	function alternarDebug() {
+	  debug = !debug;
+	  const btn = document.querySelector('button[onclick="alternarDebug()"]');
+	  btn.textContent = debug
+		? '🐞 Modo Debug: ON (x10)'
+		: '🐞 Modo Debug: OFF';
+
+	  if (intervalo) {
+		pausarReloj();
+		iniciarReloj(); // reinicia con nuevo factor de velocidad
+	  }
+	}
+
+	let relojCorriendo = false;
+
+	function alternarReloj() {
+	  const btn = document.getElementById('botonReloj');
+	  if (relojCorriendo) {
+		pausarReloj();
+		btn.textContent = '▶️ Reanudar';
+	  } else {
+		iniciarReloj();
+		// ← Loguea el inicio de RCP:
+		registrarEvento('Se inician maniobras de RCP');
+		btn.textContent = '⏸️ Pausar';
+	  }
+	  relojCorriendo = !relojCorriendo;
+	}
+
+
+	function handleEvento(evento) {
+	  const lista = document.getElementById('listaEventos');
+	  const fechaHora = obtenerFechaHora();
+	  const crono = document.getElementById('contenedorReloj').textContent;
+	  const li = document.createElement('li');
+	  li.textContent = `${fechaHora} — ${crono} — ${evento}`;
+	  lista.appendChild(li);
+
+	  if (evento === 'Adrenalina') {
+		const btn = document.getElementById('btnAdrenalina');
+		btn.classList.remove('alerta');
+		// Detener y resetear el sonido
+		adrenalinaAudio.pause();
+		adrenalinaAudio.currentTime = 0;
+		proximoAdrenalina = segundos + intervaloAdrenalina;
+	  }
+	  if (evento === 'Cambio de compresor') {
+		const btn = document.getElementById('btnCompresor');
+		btn.classList.remove('alerta');
+		compresorAudio.pause();
+		compresorAudio.currentTime = 0;
+		proximoCompresor = segundos + intervaloCompresor;
+	  }
+	}
+
+
+	function startMetronome() {
+	  const bpm    = bpmModes[currentBpmIndex];
+	  const period = 60000 / bpm;
+	  clickAudio.currentTime = 0;
+	  clickAudio.play();
+	  metronomoInterval = setInterval(() => {
+		clickAudio.currentTime = 0;
+		clickAudio.play();
+	  }, period);
+	  document.getElementById('metronomoBtn').textContent = '⏸️ Detener';
+	}
+
+	function toggleMetronome() {
+	  const btn = document.getElementById('metronomoBtn');
+	  if (metronomoInterval) {
+		clearInterval(metronomoInterval);
+		metronomoInterval = null;
+		btn.textContent   = '▶️ Iniciar';
+	  } else {
+		startMetronome();
+	  }
+	}
+
+	// Enlaza el botón de inicio/parada
+	document.getElementById('metronomoBtn').onclick = toggleMetronome;
+
+
+
+	</script>
+  
+</body>
+</html>
