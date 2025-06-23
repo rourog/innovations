@@ -225,6 +225,12 @@
 
 
 	}
+    main { padding: 16px; display: flex; flex-direction: column; gap: 14px; padding-bottom: 60px; /* espacio para footer */ }
+    .input-row { display: flex; gap: 16px; align-items: flex-end; }
+    .input-row > div { flex: 1; }
+    .input-row label { font-weight: bold; display: block; margin-bottom: 4px; }
+    .input-row input { width: 100%; padding: 6px 10px; font-size: 1rem; box-sizing: border-box; }
+    #sexoToggle { font-size: 1.5rem; background: none; border: none; cursor: pointer; }
 
   </style>
 </head>
@@ -241,19 +247,32 @@
 
   <main  class="row">
   <div id="seccionCalculadora">
-
+  
+	<div class="input-row">
       <div>
         <label for="peso">Peso (kg)</label>
         <input type="number" id="peso" placeholder="Ej: 70" oninput="calcularDosis()" />
       </div>
+	  
       <div>
         <label for="talla">Talla (cm)</label>
         <input type="number" id="talla" placeholder="Ej: 170" oninput="calcularDosis()" />
       </div>
-
+	  
+	  <div>
+        <label for="edad">Edad (años)</label>
+        <input type="number" id="edad" placeholder="Ej: 35" />
+      </div>
+	  
+	  <div>
+        <label for="sexoToggle">Sexo</label>
+        <button id="sexoToggle">🚹</button>
+      </div>
+	  
+	</div>
 
     <label for="modoToggle">Modo de administración</label>
-    <button id="modoToggle" class="modo-toggle" onclick="alternarModo()">Infusión continua</button>
+    <button id="modoToggle" class="modo-toggle" onclick="alternarModo()" style="width:100%">Infusión continua</button>
 
     <div class="med-section">
       <h3>Dosis sugeridas:</h3>
@@ -327,6 +346,23 @@
 
 
   <script>
+  
+    let sexo = 'M';
+    document.addEventListener('DOMContentLoaded', () => {
+      inicializarSexo();
+    });
+    function inicializarSexo() {
+      document.getElementById('sexoToggle').textContent = sexo === 'M' ? '🚹' : '🚺';
+      document.getElementById('sexoToggle').addEventListener('click', toggleSexo);
+    }
+		function toggleSexo() {
+	  sexo = (sexo === 'M' ? 'F' : 'M');
+	  document.getElementById('sexoToggle').textContent =
+		sexo === 'M' ? '🚹' : '🚺';
+	  calcularDosis();   // <— aquí
+	}
+
+	
     const temas = ['dark', 'sunset', 'day'];
     let temaActual = 1;
     let modo = 'infusion';
@@ -369,116 +405,158 @@
       navigator.clipboard.writeText(texto).then(() => alert("Parámetros copiados al portapapeles"));
     }
 
-    function calcularParametrosExtras(peso, talla) {
-      let pesoIdeal = 0.9 * (talla - 100);
-      let superficie = 0.007184 * Math.pow(peso, 0.425) * Math.pow(talla, 0.725);
-      let reqBasal = 0;
-      if (peso <= 10) reqBasal = peso * 100;
-      else if (peso <= 20) reqBasal = 1000 + (peso - 10) * 50;
-      else reqBasal = 1500 + (peso - 20) * 20;
-      return {
-        pesoIdeal: pesoIdeal.toFixed(1),
-        superficie: superficie.toFixed(2),
-        reqBasal: Math.round(reqBasal)
-      };
+
+function calcularParametrosExtras(peso, talla, sexo) {
+  // 1) Peso Ideal según ARDSnet
+  const ajuste = talla - 152.4;
+  let ibw;
+  if (sexo === 'M') {
+    ibw = 50 + 0.91 * ajuste;
+  } else {
+    ibw = 45.5 + 0.91 * ajuste;
+  }
+  const pesoIdeal = parseFloat(ibw.toFixed(1)); // kg
+
+  // 2) Superficie corporal (Mosteller)
+  const superficieCalc = 0.007184 * Math.pow(peso, 0.425) * Math.pow(talla, 0.725);
+  const superficie = superficieCalc.toFixed(2); // m²
+
+  // 3) Requerimiento basal de líquidos (Schofield modificado)
+  let reqBasal;
+  if (peso <= 10) {
+    reqBasal = peso * 100;
+  } else if (peso <= 20) {
+    reqBasal = 1000 + (peso - 10) * 50;
+  } else {
+    reqBasal = 1500 + (peso - 20) * 20;
+  }
+  reqBasal = Math.round(reqBasal); // mL/día
+
+  return {
+    pesoIdeal,
+    superficie,
+    reqBasal
+  };
+}
+
+
+/**
+ * Calcula dosis según modo, actualiza parámetros y catéteres.
+ * Usa la variable global `sexo` y la función `calcularParametrosExtras(peso, talla, sexo)`.
+ */
+function calcularDosis() {
+  // 1) Leer inputs y contenedores
+  const peso       = parseFloat(document.getElementById('peso').value);
+  const talla      = parseFloat(document.getElementById('talla').value);
+  const resultados = document.getElementById('resultados');
+  const extras     = document.getElementById('infoExtras');
+  const infoFormula = document.getElementById('infoCateteresFormula');
+
+  // 2) Validar peso
+  if (!peso || peso <= 0) {
+    resultados.textContent = 'Ingresa un peso válido.';
+    extras.innerHTML = `
+      <strong>Parámetros complementarios:</strong><br />
+      Peso ideal: — kg<br />
+      Superficie corporal: — m²<br />
+      Requerimiento basal de líquidos: — mL/día
+    `;
+    infoFormula.innerHTML = `
+      <strong>Catéteres por fórmula (según talla):</strong><br />
+      Yugular derecha: —<br />
+      Yugular izquierda: —<br />
+      Subclavia derecha: —<br />
+      Subclavia izquierda: —
+    `;
+    return;
+  }
+
+  // 3) Calcular parámetros extras (IBW ARDSnet, superficie, reqBasal)
+  const { pesoIdeal, superficie, reqBasal } =
+    calcularParametrosExtras(peso, talla, sexo);
+
+  extras.innerHTML = `
+    <strong>Parámetros complementarios:</strong><br />
+    Peso ideal: ${pesoIdeal} kg<br />
+    Superficie corporal: ${superficie} m²<br />
+    Requerimiento basal de líquidos: ${reqBasal} mL/día
+  `;
+
+  // 4) Lógica de dosis
+  let salida = '';
+  if (modo === 'infusion') {
+    // Definición de fármacos
+    const propofol =   { low: 1,   high: 3,   conc: 10, desc: 'Propofol al 1% (10 mg/mL)' };
+    const midazolam =  { low: 0.02,high: 0.1, conc: 1,  desc: '100 mg en 100 cc Salina 0.9% (1 mg/mL)' };
+    const fentanilo =  { low: 0.5, high: 2,   conc: 10, desc: '500 mcg en 100 cc Salina 0.9% (5 mcg/mL)' };
+    const norepi =     { low: 0.05,high: 1,   conc: 160,desc: '16 mg en 100 cc Salina 0.9% (160 mcg/mL)', perMinute: true };
+    const dex =        { low: 0.2, high: 1.4, conc: 4,  desc: '400 mcg en 100 cc Salina 0.9% (4 mcg/mL)' };
+
+    function calc(med, unidad, sufijo) {
+      const mult   = med.perMinute ? 60 : 1;
+      const volLow = ((med.low  * peso * mult) / med.conc).toFixed(1);
+      const volHigh= ((med.high * peso * mult) / med.conc).toFixed(1);
+      return `${sufijo}: ${volLow}–${volHigh} cc/${ med.perMinute ? 'min' : 'h' } (${med.low.toFixed(2)}–${med.high.toFixed(2)} ${unidad})\n→ Disuelto en: ${med.desc}`;
     }
 
-    function calcularDosis() {
-      const peso = parseFloat(document.getElementById('peso').value);
-      const talla = parseFloat(document.getElementById('talla').value);
-      const resultados = document.getElementById('resultados');
-      const extras = document.getElementById('infoExtras');
+    salida += calc(propofol,  'mg/kg/h',   'Propofol')   + "\n\n";
+    salida += calc(midazolam, 'mg/kg/h',   'Midazolam')  + "\n\n";
+    salida += calc(fentanilo, 'mcg/kg/h',  'Fentanilo')  + "\n\n";
+    salida += calc(norepi,    'mcg/kg/min','Norepinefrina')+ "\n\n";
+    salida += calc(dex,       'mcg/kg/h',  'Dexmedetomidina');
+  } else {
+    // Bolo
+    const propLow    = 2.0, propHigh    = 2.5;   // mg/kg
+    const midLow     = 0.05,midHigh     = 0.1;   // mg/kg
+    const fentLow    = 1,    fentHigh    = 2;     // mcg/kg
+    const concProp   = 10;   // mg/mL
+    const concMid1   = 1,    concMid5    = 5;     // mg/mL
+    const concFent   = 50;   // mcg/mL
 
-      if (!peso || peso <= 0) {
-        resultados.textContent = 'Ingresa un peso válido.';
-        extras.innerHTML = '<strong>Parámetros complementarios:</strong><br />Peso ideal: — kg<br />Superficie corporal: — m²<br />Requerimiento basal de líquidos: — mL/día';
-        return;
-      }
+    // Propofol bolo
+    const p1 = peso * propLow, p2 = peso * propHigh;
+    salida += `Propofol inducción:\n` +
+              `  ${propLow} mg/kg → ${p1.toFixed(0)} mg ≈ ${(p1/concProp).toFixed(1)} cc\n` +
+              `  ${propHigh} mg/kg → ${p2.toFixed(0)} mg ≈ ${(p2/concProp).toFixed(1)} cc\n\n`;
 
-      const { pesoIdeal, superficie, reqBasal } = calcularParametrosExtras(peso, talla);
-      extras.innerHTML = `<strong>Parámetros complementarios:</strong><br />Peso ideal: ${pesoIdeal} kg<br />Superficie corporal: ${superficie} m²<br />Requerimiento basal de líquidos: ${reqBasal} mL/día`;
+    // Midazolam bolo
+    const m1 = peso * midLow, m2 = peso * midHigh;
+    salida += `Midazolam bolo:\n` +
+              `  ${midLow} mg/kg → ${m1.toFixed(1)} mg ≈ ${(m1/concMid1).toFixed(1)} cc (1 mg/mL)\n` +
+              `                       ${(m1/concMid5).toFixed(1)} cc (5 mg/mL)\n` +
+              `  ${midHigh} mg/kg → ${m2.toFixed(1)} mg ≈ ${(m2/concMid1).toFixed(1)} cc (1 mg/mL)\n` +
+              `                       ${(m2/concMid5).toFixed(1)} cc (5 mg/mL)\n\n`;
 
-      let salida = '';
-      if (modo === 'infusion') {
-        const propofol = { low: 1, high: 3, conc: 10, desc: 'Propofol al 1% (10 mg/mL)' };
-        const midazolam = { low: 0.02, high: 0.1, conc: 1, desc: '100 mg en 100 cc Sol. Salina 0.9% (1mg/ml)' };
-        const fentanilo = { low: 0.5, high: 2, conc: 10, desc: '500 mcg en 100 cc Sol. Salina 0.9% (5 mcg/mL)' };
-        const norepi = { low: 0.05, high: 1, conc: 160, desc: '16 mg en 100 cc Sol. Salina 0.9% (160 mcg/mL)', perMinute: true };
-        const dex = { low: 0.2, high: 1.4, conc: 4, desc: '400 mcg en 100 cc Sol. Salina 0.9% (4 mcg/mL)' };
+    // Fentanilo bolo
+    const f1 = peso * fentLow, f2 = peso * fentHigh;
+    salida += `Fentanilo bolo:\n` +
+              `  ${fentLow} mcg/kg → ${f1.toFixed(0)} mcg ≈ ${(f1/concFent).toFixed(1)} cc\n` +
+              `  ${fentHigh} mcg/kg → ${f2.toFixed(0)} mcg ≈ ${(f2/concFent).toFixed(1)} cc`;
+  }
 
-        function calc(med, unidad, sufijo) {
-          const mult = med.perMinute ? 60 : 1;
-          const volLow = ((med.low * peso * mult) / med.conc).toFixed(1);
-          const volHigh = ((med.high * peso * mult) / med.conc).toFixed(1);
-          return `${sufijo}: ${volLow}–${volHigh} cc/h (${med.low.toFixed(2)}–${med.high.toFixed(2)} ${unidad})\n→ Disuelto en: ${med.desc}`;
-        }
+  resultados.textContent = salida;
 
-        salida += calc(propofol, 'mg/kg/h', 'Propofol') + "\n\n";
-        salida += calc(midazolam, 'mg/kg/h', 'Midazolam') + "\n\n";
-        salida += calc(fentanilo, 'mcg/kg/h', 'Fentanilo') + "\n\n";
-        salida += calc(norepi, 'mcg/kg/min', 'Norepinefrina') + "\n\n";
-        salida += calc(dex, 'mcg/kg/h', 'Dexmedetomidina');
-		} else {
-		  // Dosis en bolo por peso
-		  const propofolLow = 2.0, propofolHigh = 2.5;
-		  const midazolamLow = 0.05, midazolamHigh = 0.1;
-		  const fentaniloLow = 1, fentaniloHigh = 2;
+  // 5) Catéteres según talla
+  if (talla > 0) {
+    const base = talla / 10;
+    infoFormula.innerHTML = `
+      <strong>Catéteres por fórmula (según talla):</strong><br />
+      Yugular derecha: ${(base - 1).toFixed(1)} cm<br />
+      Yugular izquierda: ${(base + 4).toFixed(1)} cm<br />
+      Subclavia derecha: ${(base - 2).toFixed(1)} cm<br />
+      Subclavia izquierda: ${(base + 2).toFixed(1)} cm
+    `;
+  } else {
+    infoFormula.innerHTML = `
+      <strong>Catéteres por fórmula (según talla):</strong><br />
+      Yugular derecha: —<br />
+      Yugular izquierda: —<br />
+      Subclavia derecha: —<br />
+      Subclavia izquierda: —
+    `;
+  }
+}
 
-		  // Concentraciones en ampolla
-		  const concPropofol = 10;     // mg/mL
-		  const concMidazolam = 5;     // mg/mL
-		  const concFentanilo = 50;    // mcg/mL
-
-		  // Cálculos
-		  const propofol1 = (peso * propofolLow);
-		  const propofol2 = (peso * propofolHigh);
-		  const midazolam1 = (peso * midazolamLow);
-		  const midazolam2 = (peso * midazolamHigh);
-		  const fentanilo1 = (peso * fentaniloLow);
-		  const fentanilo2 = (peso * fentaniloHigh);
-
-		  salida += `Propofol inducción:\n` +
-					`  ${propofolLow} mg/kg → ${propofol1.toFixed(0)} mg ≈ ${(propofol1 / concPropofol).toFixed(1)} cc\n` +
-					`  ${propofolHigh} mg/kg → ${propofol2.toFixed(0)} mg ≈ ${(propofol2 / concPropofol).toFixed(1)} cc\n\n`;
-
-		// Midazolam bolo con tres presentaciones
-		salida += `Midazolam bolo:\n` +
-					`  ${midazolamLow} mg/kg → ${midazolam1.toFixed(1)} mg\n` +
-					`    ≈ ${(midazolam1 / 1).toFixed(1)} cc (1 mg/mL - 5mg/5mL)\n` +
-					`    ≈ ${(midazolam1 / 5).toFixed(1)} cc (5 mg/mL - 15mg/3mL o 50mg/10mL)\n\n` +
-
-					`  ${midazolamHigh} mg/kg → ${midazolam2.toFixed(1)} mg\n` +
-					`    ≈ ${(midazolam2 / 1).toFixed(1)} cc (1 mg/mL - 5mg/5mL)\n` +
-					`    ≈ ${(midazolam2 / 5).toFixed(1)} cc (5 mg/mL - 15mg/3mL o 50mg/10mL)\n\n`;
-
-		  salida += `Fentanilo bolo:\n` +
-					`  ${fentaniloLow} mcg/kg → ${fentanilo1.toFixed(0)} mcg ≈ ${(fentanilo1 / concFentanilo).toFixed(1)} cc\n` +
-					`  ${fentaniloHigh} mcg/kg → ${fentanilo2.toFixed(0)} mcg ≈ ${(fentanilo2 / concFentanilo).toFixed(1)} cc`;
-		}
-
-
-      resultados.textContent = salida;
-	  
-	  // CATÉTERES por fórmula (según talla)
-		const infoFormula = document.getElementById('infoCateteresFormula');
-		let yd = '—', yi = '—', sd = '—', si = '—';
-
-		if (talla > 0) {
-		  const base = talla / 10;
-		  yd = `${(base - 1).toFixed(1)} cm`;
-		  yi = `${(base + 4).toFixed(1)} cm`;
-		  sd = `${(base - 2).toFixed(1)} cm`;
-		  si = `${(base + 2).toFixed(1)} cm`;
-		}
-
-		infoFormula.innerHTML = `<strong>Catéteres por fórmula (según talla):</strong><br />
-		Yugular derecha: ${yd}<br />
-		Yugular izquierda: ${yi}<br />
-		Subclavia derecha: ${sd}<br />
-		Subclavia izquierda: ${si}`;
-
-			  
-    }
 
 // Funcion para resetear el formulario
 	function resetearFormulario() {
