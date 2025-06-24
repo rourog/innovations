@@ -310,7 +310,8 @@
       <input type="number" id="edadPed" placeholder="años" oninput="calcularDosisPediatrica()" />
     </div>
   </div>
-  <div class="output" id="resultadosPed">Ingresa datos pediátricos...</div>
+  <!-- Aquí ya no va texto fijo: quedará vacío y los <details> se insertan con JS -->
+  <div id="resultadosPed"></div>
 </div>
 
 
@@ -594,25 +595,53 @@ function calcularDosis() {
 	  }
 	}
 
-//AQUI VAN LAS FUNCIONES DE DOSIS PEDIATRICAS
-// Base de datos de medicamentos pediátricos con categorías
+// AQUI VAN LAS FUNCIONES DE DOSIS PEDIATRICAS
+
+// 1) Base de datos simplificada
 const MEDICAMENTOS_PEDIATRICOS = [
-  // Antibióticos
+  {
+    categoria: 'AINES',
+    nombre: 'Paracetamol',
+    dosisToma: 15,       // mg/kg por toma
+    intervaloHrs: 8,     // cada 6 horas
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '160 mg/5 mL', mgPorMl: 160 / 5 },
+      { etiqueta: 'Gotas',  concentracion: '100 mg/mL',   mgPorMl: 100, mgPorDrop: 5 }
+    ]
+  },
+  {
+    categoria: 'AINES',
+    nombre: 'Ibuprofeno',
+    dosisToma: 10,       // mg/kg por toma
+    intervaloHrs: 8,     // cada 8 horas
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '100 mg/5 mL', mgPorMl: 100 / 5 }
+    ]
+  },
+    {
+    categoria: 'AINES',
+    nombre: 'Naproxeno',
+    dosisDia: 15,       // mg/kg por toma
+    intervaloHrs: 8,     // cada 8 horas
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '125 mg/5 mL', mgPorMl: 125 / 5 }
+    ]
+  },
   {
     categoria: 'ANTIBIOTICOS',
     nombre: 'Amoxicilina',
-    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
+    dosisDia: 50,        // mg/kg al día
+    intervaloHrs: 8,     // cada 8 horas
     presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '250 mg/5 mL', mgPorMl: 250/5 },
-      { etiqueta: 'Tableta', concentracion: '500 mg' }
+      { etiqueta: 'Jarabe', concentracion: '125 mg/5 mL', mgPorMl: 125 / 5 },
+      { etiqueta: 'Jarabe', concentracion: '250 mg/5 mL', mgPorMl: 250 / 5 }
     ]
   },
   {
     categoria: 'ANTIBIOTICOS',
     nombre: 'Ampicilina',
-    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/6-8 h',
+    dosisDia: 50,
+    intervaloHrs: 6,     // c/6-8 → usamos 6 para más conservador
     presentaciones: [
       { etiqueta: 'Polvo inyectable', concentracion: '1 g vial' }
     ]
@@ -620,8 +649,8 @@ const MEDICAMENTOS_PEDIATRICOS = [
   {
     categoria: 'ANTIBIOTICOS',
     nombre: 'Dicloxacilina',
-    dosis: { valor: 25, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/6 h',
+    dosisDia: 25,
+    intervaloHrs: 6,
     presentaciones: [
       { etiqueta: 'Cápsula', concentracion: '250 mg' }
     ]
@@ -629,303 +658,109 @@ const MEDICAMENTOS_PEDIATRICOS = [
   {
     categoria: 'ANTIBIOTICOS',
     nombre: 'Cefalexina',
-    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
+    dosisDia: 50,
+    intervaloHrs: 8,
     presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '250 mg/5 mL', mgPorMl: 250/5 }
+      { etiqueta: 'Jarabe', concentracion: '250 mg/5 mL', mgPorMl: 250 / 5 }
     ]
   },
   {
     categoria: 'ANTIBIOTICOS',
     nombre: 'Ceftriaxona',
-    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'dosis única/día',
+    dosisDia: 50,
+    intervaloHrs: 24,
     presentaciones: [
       { etiqueta: 'Polvo inyectable', concentracion: '1 g vial' }
     ]
   },
   {
-    categoria: 'ANTIBIOTICOS',
-    nombre: 'Eritromicina',
-    dosis: { valor: 30, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/6 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '200 mg/5 mL', mgPorMl: 200/5 }
-    ]
-  },
-  {
-    categoria: 'ANTIBIOTICOS',
-    nombre: 'Claritromicina',
-    dosis: { valor: 15, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/12 h',
-    presentaciones: [
-      { etiqueta: 'Tableta', concentracion: '250 mg' }
-    ]
-  },
-  // Antiparasitarios
-  {
     categoria: 'ANTIPARASITARIOS',
     nombre: 'Metronidazol',
-    dosis: { valor: 30, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
+    dosisDia: 30,
+    intervaloHrs: 8,
     presentaciones: [
-      { etiqueta: 'Suspensión', concentracion: '200 mg/5 mL', mgPorMl: 200/5 }
+      { etiqueta: 'Suspensión', concentracion: '200 mg/5 mL', mgPorMl: 200 / 5 }
     ]
   },
-  // AINES
-  {
-    categoria: 'AINES',
-    nombre: 'Paracetamol',
-    dosis: { valor: 15, unidad: 'mg/kg', tipo: 'mgKg' },
-    intervalo: 'c/6 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '160 mg/5 mL', mgPorMl: 160/5 },
-      { etiqueta: 'Gotas', concentracion: '100 mg/mL', mgPorMl: 100, mgPorDrop: 5 }
-    ]
-  },
-  {
-    categoria: 'AINES',
-    nombre: 'Ibuprofeno',
-    dosis: { valor: 10, unidad: 'mg/kg', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '100 mg/5 mL', mgPorMl: 100/5 }
-    ]
-  },
-  {
-    categoria: 'AINES',
-    nombre: 'Naproxeno',
-    dosis: { valor: 10, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/12 h',
-    presentaciones: [
-      { etiqueta: 'Tableta', concentracion: '250 mg' }
-    ]
-  },
-  // Corticoides
-  {
-    categoria: 'CORTICOIDES',
-    nombre: 'Prednisolona',
-    dosis: { valor: 1, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/24 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '5 mg/5 mL', mgPorMl: 5/5 }
-    ]
-  },
-  {
-    categoria: 'CORTICOIDES',
-    nombre: 'Betametasona',
-    dosis: { valor: 0.15, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'dosis única',
-    presentaciones: [
-      { etiqueta: 'Solución inyectable', concentracion: '4 mg/mL', mgPorMl: 4 }
-    ]
-  },
-  // Antihistamínicos
-  {
-    categoria: 'ANTIHISTAMINICOS',
-    nombre: 'Loratadina',
-    dosis: { tipo: 'edad', unidad: 'mg', rangos: [ { max: 5, valor: 2.5 }, { max: Infinity, valor: 5 } ] },
-    intervalo: 'c/24 h',
-    edadMin: 2,
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '1 mg/mL', mgPorMl: 1 },
-      { etiqueta: 'Tableta', concentracion: '5 mg' }
-    ]
-  },
-  {
-    categoria: 'ANTIHISTAMINICOS',
-    nombre: 'Desloratadina',
-    dosis: { valor: 0.25, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'dosis única',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '0.5 mg/mL', mgPorMl: 0.5 }
-    ]
-  },
-  {
-    categoria: 'ANTIHISTAMINICOS',
-    nombre: 'Clorfenamina',
-    dosis: { valor: 0.35, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/6 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '2 mg/5 mL', mgPorMl: 2/5 }
-    ]
-  },
-  {
-    categoria: 'ANTIHISTAMINICOS',
-    nombre: 'Difenhidramina',
-    dosis: { valor: 1, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/6 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '12.5 mg/5 mL', mgPorMl: 12.5/5 }
-    ]
-  },
-  // Antivirales
   {
     categoria: 'ANTIVIRALES',
     nombre: 'Aciclovir',
-    dosis: { valor: 10, unidad: 'mg/kg', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
+    dosisToma: 10,
+    intervaloHrs: 8,
     presentaciones: [
-      { etiqueta: 'Suspensión', concentracion: '200 mg/5 mL', mgPorMl: 200/5 }
+      { etiqueta: 'Suspensión', concentracion: '200 mg/5 mL', mgPorMl: 200 / 5 }
     ]
   },
-  // Respiratorios
-  {
-    categoria: 'RESPIRATORIOS',
-    nombre: 'Metamizol sódico',
-    dosis: { valor: 10, unidad: 'mg/kg', tipo: 'mgKg' },
-    intervalo: 'c/6 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '500 mg/5 mL', mgPorMl: 500/5 }
-    ]
-  },
-  {
-    categoria: 'RESPIRATORIOS',
-    nombre: 'Ambroxol',
-    dosis: { valor: 1, unidad: 'mg/kg/día', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '30 mg/5 mL', mgPorMl: 30/5 }
-    ]
-  },
-  {
-    categoria: 'RESPIRATORIOS',
-    nombre: 'Dextrometorfano',
-    dosis: { valor: 0.5, unidad: 'mg/kg', tipo: 'mgKg' },
-    intervalo: 'c/6 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '15 mg/5 mL', mgPorMl: 15/5 }
-    ]
-  },
-  {
-    categoria: 'RESPIRATORIOS',
-    nombre: 'Oxolamina',
-    dosis: { valor: 0.1, unidad: 'mL/kg', tipo: 'mlKg' },
-    intervalo: 'c/6 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '10 mg/5 mL', mgPorMl: 10/5 }
-    ]
-  },
-  // Gastrointestinales
-  {
-    categoria: 'GASTROINTESTINALES',
-    nombre: 'Metoclopramida',
-    dosis: { valor: 0.15, unidad: 'mg/kg', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
-    presentaciones: [
-      { etiqueta: 'Suspensión', concentracion: '5 mg/5 mL', mgPorMl: 5/5 }
-    ]
-  },
-  {
-    categoria: 'GASTROINTESTINALES',
-    nombre: 'Lactulosa',
-    dosis: { valor: 1, unidad: 'mL/kg', tipo: 'mlKg' },
-    intervalo: 'c/12 h',
-    presentaciones: [
-      { etiqueta: 'Jarabe', concentracion: '10 g/15 mL' }
-    ]
-  },
-  {
-    categoria: 'GASTROINTESTINALES',
-    nombre: 'Macrogol',
-    dosis: { valor: 0.7, unidad: 'g/kg/día', tipo: 'gKg' },
-    intervalo: 'c/24 h',
-    presentaciones: [
-      { etiqueta: 'Polvo', concentracion: '13 g/sobre' }
-    ]
-  },
-  {
-    categoria: 'GINECOLOGICOS',
-    nombre: 'Dimeticona',
-    dosis: { valor: 1, unidad: 'mL/kg', tipo: 'mlKg' },
-    intervalo: 'c/8 h',
-    presentaciones: [
-      { etiqueta: 'Gotas', concentracion: '40 mg/mL', mgPorMl: 40 }
-    ]
-  },
-  {
-    categoria: 'GASTROINTESTINALES',
-    nombre: 'Butilhioscina',
-    dosis: { valor: 0.3, unidad: 'mg/kg', tipo: 'mgKg' },
-    intervalo: 'c/8 h',
-    presentaciones: [
-      { etiqueta: 'Tableta', concentracion: '10 mg' }
-    ]
-  }
+  // … añade el resto siguiendo el mismo patrón …
 ];
 
 /**
  * Calcula y muestra las dosis pediátricas según peso y edad,
- * agrupadas por categoría.
+ * agrupadas por categoría en paneles colapsables.
  */
 function calcularDosisPediatrica() {
   const peso = parseFloat(document.getElementById('pesoPed').value);
   const edad = parseFloat(document.getElementById('edadPed').value);
-  const out = document.getElementById('resultadosPed');
+  const contenedor = document.getElementById('resultadosPed');
+  contenedor.innerHTML = '';
+
   if (!peso || peso <= 0 || isNaN(edad) || edad < 0) {
-    out.textContent = 'Ingresa peso y edad válidos.';
+    contenedor.textContent = 'Ingresa peso y edad válidos.';
     return;
   }
 
-  // Agrupar por categoría
-  const grupos = {};
-  MEDICAMENTOS_PEDIATRICOS.forEach(med => {
-    if (!grupos[med.categoria]) grupos[med.categoria] = [];
-    grupos[med.categoria].push(med);
-  });
+  // Agrupar medicamentos por categoría
+  const grupos = MEDICAMENTOS_PEDIATRICOS.reduce((acc, med) => {
+    acc[med.categoria] = acc[med.categoria] || [];
+    acc[med.categoria].push(med);
+    return acc;
+  }, {});
 
-  let texto = '';
+  // Crear un <details> por categoría
+  Object.keys(grupos).sort().forEach(cat => {
+    const panel = document.createElement('details');
+    const resumen = document.createElement('summary');
+    resumen.textContent = cat;
+    panel.appendChild(resumen);
 
-  // Iterar categorías ordenadas
-  Object.keys(grupos).forEach(cat => {
-    texto += `=== ${cat} ===\n`;
+    const pre = document.createElement('pre');
+    pre.style.whiteSpace = 'pre-wrap';
+    let textoCat = '';
+
     grupos[cat].forEach(med => {
-      // chequeo edad mínima
-      if (med.edadMin && edad < med.edadMin) {
-        texto += `* ${med.nombre}: No recomendado < ${med.edadMin} años.`+"\n";
-        return;
+      // calcular dosis por toma
+      let dosisPorToma;
+      if (med.dosisToma != null) {
+        dosisPorToma = med.dosisToma * peso;
+      } else {
+        const totalDia = med.dosisDia * peso;
+        const tomas    = 24 / med.intervaloHrs;
+        dosisPorToma   = totalDia / tomas;
       }
-      // calcular dosis en mg/otros
-      let dosisVal;
-      if (['mgKg','gKg','mlKg'].includes(med.dosis.tipo)) {
-        dosisVal = (med.dosis.valor * peso).toFixed(2);
-      } else if (med.dosis.tipo === 'edad') {
-        const rango = med.dosis.rangos.find(r=> edad <= r.max);
-        dosisVal = rango ? rango.valor.toFixed(2) : null;
-      }
-      if (!dosisVal) {
-        texto += `* ${med.nombre}: Sin dosis recomendada.`+"\n";
-        return;
-      }
-      // encabezado dosis
-      const dosisLabel = ['mgKg','gKg','mlKg'].includes(med.dosis.tipo)
-        ? `${med.dosis.valor}${med.dosis.unidad}`
-        : `${dosisVal}${med.dosis.unidad}`;
-      texto += `* ${med.nombre} (${dosisLabel} dosis):`+"\n";
+
+      // encabezado
+      textoCat += `${med.nombre} (${med.dosisToma != null
+        ? med.dosisToma + ' mg/kg por toma'
+        : med.dosisDia + ' mg/kg/día'})\n`;
+
       // presentaciones
-      med.presentaciones.forEach(p=>{
+      med.presentaciones.forEach(p => {
         if (p.mgPorMl) {
-          const ml = (dosisVal/p.mgPorMl).toFixed(2);
-          let linea = `    - ${p.etiqueta} (${p.concentracion}): ${ml} mL`;
-          if (p.mgPorDrop) {
-            const gotas = Math.ceil(dosisVal/p.mgPorDrop);
-            linea += ` (~${gotas} gotas)`;
-          }
-          linea += ` ${med.intervalo}`;
-          texto += linea+"\n";
+          const ml = dosisPorToma / p.mgPorMl;
+          textoCat += `- ${p.etiqueta} ${p.concentracion}: Tomar ${ml.toFixed(2)} mL c/${med.intervaloHrs} h\n`;
         } else {
-          texto += `    - ${p.etiqueta} (${p.concentracion}) ${med.intervalo}`+"\n";
+          textoCat += `- ${p.etiqueta} ${p.concentracion}: ${dosisPorToma.toFixed(2)} unidades c/${med.intervaloHrs} h\n`;
         }
       });
-      texto += "\n";
+
+      textoCat += '\n';
     });
+
+    pre.textContent = textoCat.trim();
+    panel.appendChild(pre);
+    contenedor.appendChild(panel);
   });
-
-  out.textContent = texto.trim();
 }
-
-
-
 
   </script>
   
