@@ -232,18 +232,20 @@
     .input-row input { width: 100%; padding: 6px 10px; font-size: 1rem; box-sizing: border-box; }
     #sexoToggle { font-size: 1.5rem; background: none; border: none; cursor: pointer; }
 
-  </style>
+</style>
 </head>
-<body onload="document.getElementById('peso').focus()">
+
+<body onload="document.getElementById('peso').focus()" onload="showTab('seccionCalculadora')">
 	<header>
-	  <div class="header-left">💉 Dosify Beta</div>
+	  <div class="header-left">💉Dosify</div>
 	  <div class="header-right">
-		<button class="theme-toggle" onclick="alternarVista()">⏱</button>
+		<button onclick="showTab('seccionCalculadora')" class="theme-toggle">🍺</button>
+		<button onclick="showTab('seccionPediatrica')" class="theme-toggle" >🥤</button>
+		<button onclick="showTab('seccionReloj')" class="theme-toggle">⏱️</button>
 		<button id="themeButton" class="theme-toggle" onclick="cambiarTema()">🧪</button>
 		<button class="theme-toggle" onclick="resetearFormulario()">🔄</button>
 	  </div>
 	</header>
-
 
   <main  class="row">
   <div id="seccionCalculadora">
@@ -296,57 +298,65 @@
 	</div>
 </div>
 
+<div id="seccionPediatrica" style="display: none; padding:16px;">
+  <h2>Dosis Pediátricas</h2>
+  <div class="input-row">
+    <div>
+      <label for="pesoPed">Peso (kg)</label>
+      <input type="number" id="pesoPed" placeholder="kg" oninput="calcularDosisPediatrica()" />
+    </div>
+    <div>
+      <label for="edadPed">Edad (años)</label>
+      <input type="number" id="edadPed" placeholder="años" oninput="calcularDosisPediatrica()" />
+    </div>
+  </div>
+  <div class="output" id="resultadosPed">Ingresa datos pediátricos...</div>
+</div>
 
 
 <div id="seccionReloj" style="display: none; text-align: center; padding: 20px;">
-  <h2>⏱ Reloj de RCP</h2>
+	  <h2>⏱ Reloj de RCP</h2>
 
-  <div id="contenedorReloj" style="font-size: 3rem; margin: 20px;">00:00.000</div>
+	  <div id="contenedorReloj" style="font-size: 3rem; margin: 20px;">00:00.000</div>
 
-<div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 20px;">
-  <div id="botonReloj" class="boton-estilo" onclick="alternarReloj()">▶️</div>
-  <div class="boton-estilo" onclick="reiniciarReloj()">🔄</div>
+	<div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 20px;">
+	  <div id="botonReloj" class="boton-estilo" onclick="alternarReloj()">▶️</div>
+	  <div class="boton-estilo" onclick="reiniciarReloj()">🔄</div>
+	</div>
+
+	<div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+	  <div id="btnAdrenalina" class="boton-estilo" onclick="handleEvento('Adrenalina')">💉</div>
+	  <div id="btnCompresor" class="boton-estilo" onclick="handleEvento('Cambio de compresor')">🔄</div>
+	  <div id="btnRitmo"     class="boton-estilo" onclick="handleEvento('Evaluar ritmo')">🫀</div>
+	  <div id="btnDebug"     class="boton-estilo" onclick="alternarDebug()">🐞</div>
+	</div>
+
+	<!-- Controls del metrónomo -->
+	<div style="display: flex; justify-content: center; gap: 10px; margin-top: 12px;">
+	  <button id="bpmBtn"       class="boton-estilo">120 BPM</button>
+	  <button id="metronomoBtn" class="boton-estilo">▶️ Iniciar</button>
+	</div>
+	<div style="margin-top: 30px; text-align: left;">
+		<h4>Eventos:</h4>
+		<ul id="listaEventos" style="list-style: none; padding-left: 0;"></ul>
+	</div>
+	<div style="margin-top: 10px;"></div>
 </div>
 
-<div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
-  <div id="btnAdrenalina" class="boton-estilo" onclick="handleEvento('Adrenalina')">💉</div>
-  <div id="btnCompresor" class="boton-estilo" onclick="handleEvento('Cambio de compresor')">🔄</div>
-  <div id="btnRitmo"     class="boton-estilo" onclick="handleEvento('Evaluar ritmo')">🫀</div>
-  <div id="btnDebug"     class="boton-estilo" onclick="alternarDebug()">🐞</div>
-</div>
-
-<!-- Controls del metrónomo -->
-<div style="display: flex; justify-content: center; gap: 10px; margin-top: 12px;">
-  <button id="bpmBtn"       class="boton-estilo">120 BPM</button>
-  <button id="metronomoBtn" class="boton-estilo">▶️ Iniciar</button>
-</div>
-
-
-
-
-  <div style="margin-top: 30px; text-align: left;">
-    <h4>Eventos:</h4>
-    <ul id="listaEventos" style="list-style: none; padding-left: 0;"></ul>
-  </div>
-  
-  <div style="margin-top: 10px;">
-
-</div>
-
-</div>
-
-
-
-<footer class="site-footer">
-  Rourog Innovations © 2025. Todos los derechos reservados.
-</footer>
-
-
-  </main>
+	<footer class="site-footer">
+	  Rourog Innovations © 2025. Todos los derechos reservados.
+	</footer>
+</main>
 
 
   <script>
   
+  //funcion para cambiar las pestañas
+	function showTab(id) {
+		['seccionCalculadora','seccionPediatrica','seccionReloj'].forEach(sec => {
+		document.getElementById(sec).style.display = (sec === id) ? 'block' : 'none';});}
+
+//funcion para cambiar el sexo
     let sexo = 'M';
     document.addEventListener('DOMContentLoaded', () => {
       inicializarSexo();
@@ -362,7 +372,7 @@
 	  calcularDosis();   // <— aquí
 	}
 
-	
+// funcion para cambiar el tema
     const temas = ['dark', 'sunset', 'day'];
     let temaActual = 1;
     let modo = 'infusion';
@@ -388,7 +398,7 @@
 
 	}
 
-
+// funcion para alternar entre modos ( infusion/bolo)
     function alternarModo() {
       modo = (modo === 'infusion') ? 'bolo' : 'infusion';
       document.getElementById('modoToggle').textContent = (modo === 'infusion') ? 'Infusión continua' : 'Inducción (bolo)';
@@ -584,8 +594,344 @@ function calcularDosis() {
 	  }
 	}
 
+//AQUI VAN LAS FUNCIONES DE DOSIS PEDIATRICAS
+// Base de datos de medicamentos pediátricos con categorías
+const MEDICAMENTOS_PEDIATRICOS = [
+  // Antibióticos
+  {
+    categoria: 'ANTIBIOTICOS',
+    nombre: 'Amoxicilina',
+    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '250 mg/5 mL', mgPorMl: 250/5 },
+      { etiqueta: 'Tableta', concentracion: '500 mg' }
+    ]
+  },
+  {
+    categoria: 'ANTIBIOTICOS',
+    nombre: 'Ampicilina',
+    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/6-8 h',
+    presentaciones: [
+      { etiqueta: 'Polvo inyectable', concentracion: '1 g vial' }
+    ]
+  },
+  {
+    categoria: 'ANTIBIOTICOS',
+    nombre: 'Dicloxacilina',
+    dosis: { valor: 25, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Cápsula', concentracion: '250 mg' }
+    ]
+  },
+  {
+    categoria: 'ANTIBIOTICOS',
+    nombre: 'Cefalexina',
+    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '250 mg/5 mL', mgPorMl: 250/5 }
+    ]
+  },
+  {
+    categoria: 'ANTIBIOTICOS',
+    nombre: 'Ceftriaxona',
+    dosis: { valor: 50, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'dosis única/día',
+    presentaciones: [
+      { etiqueta: 'Polvo inyectable', concentracion: '1 g vial' }
+    ]
+  },
+  {
+    categoria: 'ANTIBIOTICOS',
+    nombre: 'Eritromicina',
+    dosis: { valor: 30, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '200 mg/5 mL', mgPorMl: 200/5 }
+    ]
+  },
+  {
+    categoria: 'ANTIBIOTICOS',
+    nombre: 'Claritromicina',
+    dosis: { valor: 15, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/12 h',
+    presentaciones: [
+      { etiqueta: 'Tableta', concentracion: '250 mg' }
+    ]
+  },
+  // Antiparasitarios
+  {
+    categoria: 'ANTIPARASITARIOS',
+    nombre: 'Metronidazol',
+    dosis: { valor: 30, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Suspensión', concentracion: '200 mg/5 mL', mgPorMl: 200/5 }
+    ]
+  },
+  // AINES
+  {
+    categoria: 'AINES',
+    nombre: 'Paracetamol',
+    dosis: { valor: 15, unidad: 'mg/kg', tipo: 'mgKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '160 mg/5 mL', mgPorMl: 160/5 },
+      { etiqueta: 'Gotas', concentracion: '100 mg/mL', mgPorMl: 100, mgPorDrop: 5 }
+    ]
+  },
+  {
+    categoria: 'AINES',
+    nombre: 'Ibuprofeno',
+    dosis: { valor: 10, unidad: 'mg/kg', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '100 mg/5 mL', mgPorMl: 100/5 }
+    ]
+  },
+  {
+    categoria: 'AINES',
+    nombre: 'Naproxeno',
+    dosis: { valor: 10, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/12 h',
+    presentaciones: [
+      { etiqueta: 'Tableta', concentracion: '250 mg' }
+    ]
+  },
+  // Corticoides
+  {
+    categoria: 'CORTICOIDES',
+    nombre: 'Prednisolona',
+    dosis: { valor: 1, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/24 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '5 mg/5 mL', mgPorMl: 5/5 }
+    ]
+  },
+  {
+    categoria: 'CORTICOIDES',
+    nombre: 'Betametasona',
+    dosis: { valor: 0.15, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'dosis única',
+    presentaciones: [
+      { etiqueta: 'Solución inyectable', concentracion: '4 mg/mL', mgPorMl: 4 }
+    ]
+  },
+  // Antihistamínicos
+  {
+    categoria: 'ANTIHISTAMINICOS',
+    nombre: 'Loratadina',
+    dosis: { tipo: 'edad', unidad: 'mg', rangos: [ { max: 5, valor: 2.5 }, { max: Infinity, valor: 5 } ] },
+    intervalo: 'c/24 h',
+    edadMin: 2,
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '1 mg/mL', mgPorMl: 1 },
+      { etiqueta: 'Tableta', concentracion: '5 mg' }
+    ]
+  },
+  {
+    categoria: 'ANTIHISTAMINICOS',
+    nombre: 'Desloratadina',
+    dosis: { valor: 0.25, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'dosis única',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '0.5 mg/mL', mgPorMl: 0.5 }
+    ]
+  },
+  {
+    categoria: 'ANTIHISTAMINICOS',
+    nombre: 'Clorfenamina',
+    dosis: { valor: 0.35, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '2 mg/5 mL', mgPorMl: 2/5 }
+    ]
+  },
+  {
+    categoria: 'ANTIHISTAMINICOS',
+    nombre: 'Difenhidramina',
+    dosis: { valor: 1, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '12.5 mg/5 mL', mgPorMl: 12.5/5 }
+    ]
+  },
+  // Antivirales
+  {
+    categoria: 'ANTIVIRALES',
+    nombre: 'Aciclovir',
+    dosis: { valor: 10, unidad: 'mg/kg', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Suspensión', concentracion: '200 mg/5 mL', mgPorMl: 200/5 }
+    ]
+  },
+  // Respiratorios
+  {
+    categoria: 'RESPIRATORIOS',
+    nombre: 'Metamizol sódico',
+    dosis: { valor: 10, unidad: 'mg/kg', tipo: 'mgKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '500 mg/5 mL', mgPorMl: 500/5 }
+    ]
+  },
+  {
+    categoria: 'RESPIRATORIOS',
+    nombre: 'Ambroxol',
+    dosis: { valor: 1, unidad: 'mg/kg/día', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '30 mg/5 mL', mgPorMl: 30/5 }
+    ]
+  },
+  {
+    categoria: 'RESPIRATORIOS',
+    nombre: 'Dextrometorfano',
+    dosis: { valor: 0.5, unidad: 'mg/kg', tipo: 'mgKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '15 mg/5 mL', mgPorMl: 15/5 }
+    ]
+  },
+  {
+    categoria: 'RESPIRATORIOS',
+    nombre: 'Oxolamina',
+    dosis: { valor: 0.1, unidad: 'mL/kg', tipo: 'mlKg' },
+    intervalo: 'c/6 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '10 mg/5 mL', mgPorMl: 10/5 }
+    ]
+  },
+  // Gastrointestinales
+  {
+    categoria: 'GASTROINTESTINALES',
+    nombre: 'Metoclopramida',
+    dosis: { valor: 0.15, unidad: 'mg/kg', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Suspensión', concentracion: '5 mg/5 mL', mgPorMl: 5/5 }
+    ]
+  },
+  {
+    categoria: 'GASTROINTESTINALES',
+    nombre: 'Lactulosa',
+    dosis: { valor: 1, unidad: 'mL/kg', tipo: 'mlKg' },
+    intervalo: 'c/12 h',
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '10 g/15 mL' }
+    ]
+  },
+  {
+    categoria: 'GASTROINTESTINALES',
+    nombre: 'Macrogol',
+    dosis: { valor: 0.7, unidad: 'g/kg/día', tipo: 'gKg' },
+    intervalo: 'c/24 h',
+    presentaciones: [
+      { etiqueta: 'Polvo', concentracion: '13 g/sobre' }
+    ]
+  },
+  {
+    categoria: 'GINECOLOGICOS',
+    nombre: 'Dimeticona',
+    dosis: { valor: 1, unidad: 'mL/kg', tipo: 'mlKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Gotas', concentracion: '40 mg/mL', mgPorMl: 40 }
+    ]
+  },
+  {
+    categoria: 'GASTROINTESTINALES',
+    nombre: 'Butilhioscina',
+    dosis: { valor: 0.3, unidad: 'mg/kg', tipo: 'mgKg' },
+    intervalo: 'c/8 h',
+    presentaciones: [
+      { etiqueta: 'Tableta', concentracion: '10 mg' }
+    ]
+  }
+];
+
+/**
+ * Calcula y muestra las dosis pediátricas según peso y edad,
+ * agrupadas por categoría.
+ */
+function calcularDosisPediatrica() {
+  const peso = parseFloat(document.getElementById('pesoPed').value);
+  const edad = parseFloat(document.getElementById('edadPed').value);
+  const out = document.getElementById('resultadosPed');
+  if (!peso || peso <= 0 || isNaN(edad) || edad < 0) {
+    out.textContent = 'Ingresa peso y edad válidos.';
+    return;
+  }
+
+  // Agrupar por categoría
+  const grupos = {};
+  MEDICAMENTOS_PEDIATRICOS.forEach(med => {
+    if (!grupos[med.categoria]) grupos[med.categoria] = [];
+    grupos[med.categoria].push(med);
+  });
+
+  let texto = '';
+
+  // Iterar categorías ordenadas
+  Object.keys(grupos).forEach(cat => {
+    texto += `=== ${cat} ===\n`;
+    grupos[cat].forEach(med => {
+      // chequeo edad mínima
+      if (med.edadMin && edad < med.edadMin) {
+        texto += `* ${med.nombre}: No recomendado < ${med.edadMin} años.`+"\n";
+        return;
+      }
+      // calcular dosis en mg/otros
+      let dosisVal;
+      if (['mgKg','gKg','mlKg'].includes(med.dosis.tipo)) {
+        dosisVal = (med.dosis.valor * peso).toFixed(2);
+      } else if (med.dosis.tipo === 'edad') {
+        const rango = med.dosis.rangos.find(r=> edad <= r.max);
+        dosisVal = rango ? rango.valor.toFixed(2) : null;
+      }
+      if (!dosisVal) {
+        texto += `* ${med.nombre}: Sin dosis recomendada.`+"\n";
+        return;
+      }
+      // encabezado dosis
+      const dosisLabel = ['mgKg','gKg','mlKg'].includes(med.dosis.tipo)
+        ? `${med.dosis.valor}${med.dosis.unidad}`
+        : `${dosisVal}${med.dosis.unidad}`;
+      texto += `* ${med.nombre} (${dosisLabel} dosis):`+"\n";
+      // presentaciones
+      med.presentaciones.forEach(p=>{
+        if (p.mgPorMl) {
+          const ml = (dosisVal/p.mgPorMl).toFixed(2);
+          let linea = `    - ${p.etiqueta} (${p.concentracion}): ${ml} mL`;
+          if (p.mgPorDrop) {
+            const gotas = Math.ceil(dosisVal/p.mgPorDrop);
+            linea += ` (~${gotas} gotas)`;
+          }
+          linea += ` ${med.intervalo}`;
+          texto += linea+"\n";
+        } else {
+          texto += `    - ${p.etiqueta} (${p.concentracion}) ${med.intervalo}`+"\n";
+        }
+      });
+      texto += "\n";
+    });
+  });
+
+  out.textContent = texto.trim();
+}
+
+
+
 
   </script>
+  
+  
+  
+  
 	<script>
 	const bpmModes        = [100, 110, 120];
 	let   currentBpmIndex = 2;               // arranca en 120 BPM
@@ -824,9 +1170,7 @@ function tick(timestamp) {
 	// Enlaza el botón de inicio/parada
 	document.getElementById('metronomoBtn').onclick = toggleMetronome;
 
-
-
-	</script>
+</script>
   
 </body>
 </html>
