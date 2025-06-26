@@ -81,8 +81,8 @@
     input { font-size: 1rem; padding: 6px 10px; width: 100%; box-sizing: border-box; }
 
 	.modo-toggle, .copy-button, .theme-toggle {
-		padding: 12px 16px;
-		font-size: 1.1rem;
+		padding: 6px 6px;
+		font-size: 1.5rem;
 		font-weight: bold;
 		border: none;
 		border-radius: 8px;
@@ -240,10 +240,10 @@
 	  <div class="header-left">💉Dosify</div>
 	  <div class="header-right">
 		<button onclick="showTab('seccionCalculadora')" class="theme-toggle">🍺</button>
-		<button onclick="showTab('seccionPediatrica')" class="theme-toggle" >🥤</button>
+		<button onclick="showTab('seccionPediatrica')" class="theme-toggle" >🧃</button>
 		<button onclick="showTab('seccionReloj')" class="theme-toggle">⏱️</button>
 		<button id="themeButton" class="theme-toggle" onclick="cambiarTema()">🧪</button>
-		<button class="theme-toggle" onclick="resetearFormulario()">🔄</button>
+		<button class="theme-toggle" onclick="resetearFormulario()">⟳</button>
 	  </div>
 	</header>
 
@@ -626,6 +626,25 @@ const MEDICAMENTOS_PEDIATRICOS = [
     presentaciones: [
       { etiqueta: 'Jarabe', concentracion: '125 mg/5 mL', mgPorMl: 125 / 5 }
     ]
+  },  
+    {
+    categoria: 'AINES',
+    nombre: 'Metamizol Sodico',
+    dosisToma: 15,       // mg/kg por toma
+    intervaloHrs: 8,     // cada 8 horas
+    presentaciones: [
+      { etiqueta: 'Jarabe', concentracion: '250 mg/5 mL', mgPorMl: 250 / 5 },
+	  { etiqueta: 'Ampolleta', concentracion: '1gr/ 2mL', mgPorMl: 1000 / 2 }
+    ]
+  },
+      {
+    categoria: 'AINES',
+    nombre: 'Ketorolaco',
+    dosisToma: 1,       // mg/kg por toma
+    intervaloHrs: 8,     // cada 8 horas
+    presentaciones: [
+      { etiqueta: 'Ampolleta', concentracion: '30 mg/ mL', mgPorMl: 30 / 1 }
+    ]
   },
   {
     categoria: 'ANTIBIOTICOS',
@@ -747,7 +766,7 @@ function calcularDosisPediatrica() {
       med.presentaciones.forEach(p => {
         if (p.mgPorMl) {
           const ml = dosisPorToma / p.mgPorMl;
-          textoCat += `- ${p.etiqueta} ${p.concentracion}: Tomar ${ml.toFixed(2)} mL c/${med.intervaloHrs} h\n`;
+          textoCat += `- ${p.etiqueta} ${p.concentracion}: ${ml.toFixed(2)} mL c/${med.intervaloHrs} h\n`;
         } else {
           textoCat += `- ${p.etiqueta} ${p.concentracion}: ${dosisPorToma.toFixed(2)} unidades c/${med.intervaloHrs} h\n`;
         }
